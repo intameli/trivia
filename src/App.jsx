@@ -70,7 +70,7 @@ function App() {
 
   return (
     <div>
-      <div className="bg-blue-400 text-white p-4 rounded mb-4 flex justify-end items-center gap-2">
+      <div className="bg-blue-900 text-white p-4 rounded mb-4 flex justify-end items-center gap-2">
         <div className="text-6xl mr-auto">Trivia</div>
         <div className="dropdown dropdown-hover">
           <div
@@ -156,13 +156,17 @@ function Card({ handleScore, trivia, players }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [reveal, setReveal] = useState(false);
   const [winner, setWinner] = useState("Pick a winner");
+  const [done, setDone] = useState(false);
 
   const disableContinue = winner === "Pick a winner" ? true : false;
+
+  const bg = done ? "bg-blue-900" : "bg-primary";
 
   return (
     <motion.div
       layout
-      onClick={isExpanded ? null : () => setIsExpanded(!isExpanded)}
+      onClick={isExpanded || done ? null : () => setIsExpanded(!isExpanded)}
+      className={"border-2 rounded-2xl p-2 " + bg}
       style={{
         position: isExpanded ? "absolute" : "static",
         fontSize: isExpanded ? "5rem" : "2rem",
@@ -173,7 +177,6 @@ function Card({ handleScore, trivia, players }) {
         bottom: "200px",
       }}
       transition={{ duration: isExpanded ? 1 : 0.3 }}
-      className="bg-primary  border-2 rounded-2xl p-2"
     >
       <div className="flex flex-wrap justify-center text-center">
         {isExpanded && (
@@ -209,6 +212,7 @@ function Card({ handleScore, trivia, players }) {
                 disabled={disableContinue}
                 onClick={() => {
                   setIsExpanded(!isExpanded);
+                  setDone(true);
                   if (winner !== "No winner") {
                     handleScore(winner);
                   }
