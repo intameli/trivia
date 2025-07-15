@@ -171,14 +171,14 @@ function Card({ handleScore, trivia, players }) {
         position: isExpanded ? "absolute" : "static",
         fontSize: isExpanded ? "5rem" : "2rem",
         cursor: isExpanded ? "default" : "pointer",
-        top: "90px",
-        left: "90px",
+        top: "100px",
+        left: "100px",
         right: "90px",
-        bottom: "200px",
+        height: isExpanded ? "700px" : "auto",
       }}
       transition={{ duration: isExpanded ? 1 : 0.3 }}
     >
-      <div className="flex flex-wrap justify-center text-center">
+      <div className="flex flex-wrap justify-center text-center h-full">
         {isExpanded && (
           <div className="w-full flex justify-end">
             <div onClick={() => setIsExpanded(!isExpanded)} className="btn">
@@ -190,37 +190,39 @@ function Card({ handleScore, trivia, players }) {
         {isExpanded && (
           <>
             <p className="text-6xl mt-10 mb-12 w-full">{trivia.question}</p>
-            <button onClick={() => setReveal(!reveal)} className="btn m-4">
-              {reveal ? "Hide answer" : "Show answer"}
-            </button>
-            {reveal && <p className="text-2xl m-4">{trivia.answer}</p>}
-            <div className="w-full flex gap-3 justify-center">
-              <select
-                value={winner}
-                onChange={(e) => {
-                  setWinner(e.target.value);
-                }}
-                className="select"
-              >
-                <option disabled={true}>Pick a winner</option>
-                <option>No winner</option>
-                {players.map((player) => (
-                  <option>{player.name}</option>
-                ))}
-              </select>
-              <button
-                disabled={disableContinue}
-                onClick={() => {
-                  setIsExpanded(!isExpanded);
-                  setDone(true);
-                  if (winner !== "No winner") {
-                    handleScore(winner);
-                  }
-                }}
-                className="btn"
-              >
-                continue
+            <div className="flex flex-col h-auto w-full">
+              <button onClick={() => setReveal(!reveal)} className="btn m-4">
+                {reveal ? "Hide answer" : "Show answer"}
               </button>
+              {reveal && <p className="text-2xl m-4">{trivia.answer}</p>}
+              <div className="w-full flex gap-3 justify-center">
+                <select
+                  value={winner}
+                  onChange={(e) => {
+                    setWinner(e.target.value);
+                  }}
+                  className="select"
+                >
+                  <option disabled={true}>Pick a winner</option>
+                  <option>No winner</option>
+                  {players.map((player) => (
+                    <option>{player.name}</option>
+                  ))}
+                </select>
+                <button
+                  disabled={disableContinue}
+                  onClick={() => {
+                    setIsExpanded(!isExpanded);
+                    setDone(true);
+                    if (winner !== "No winner") {
+                      handleScore(winner);
+                    }
+                  }}
+                  className="btn"
+                >
+                  continue
+                </button>
+              </div>
             </div>
           </>
         )}
