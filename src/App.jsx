@@ -249,7 +249,13 @@ function Card({ handleScore, trivia, players }) {
       <div className="flex flex-wrap justify-center text-center h-full">
         {isExpanded && (
           <div className="w-full flex justify-end">
-            <div onClick={() => setIsExpanded(!isExpanded)} className="btn">
+            <div
+              onClick={() => {
+                setIsExpanded(!isExpanded);
+                setReveal(false);
+              }}
+              className="btn"
+            >
               Close
             </div>
           </div>
