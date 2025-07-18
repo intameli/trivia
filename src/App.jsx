@@ -8,10 +8,32 @@ const startPlayers = [
   { name: "Nathan", score: 0 },
 ];
 
+function saveGames(games) {
+  localStorage.setItem("triviaGames", JSON.stringify(games));
+}
+
+function loadGames() {
+  const savedGames = localStorage.getItem("triviaGames");
+  return JSON.parse(savedGames);
+}
+
+function deleteGame(index) {
+  const games = loadGames();
+  if (!games || index < 0 || index >= games.length) return;
+  games.splice(index, 1);
+  saveGames(games);
+  return games;
+}
+
 function App() {
-  const [games, setGames] = useState([
-    { trivia: triviaQuestions, players: startPlayers },
-  ]);
+  const [games, setGames] = useState(() => {
+    const init = [{ trivia: triviaQuestions, players: startPlayers }];
+    const load = loadGames();
+    if (load.length) {
+      console.log(load);
+    }
+    return load.length ? load : init;
+  });
   const [playing, setPlaying] = useState(0);
   const players = playing ? games[playing - 1].players : [];
 
@@ -41,15 +63,13 @@ function App() {
       const text = e.target.result;
       const parsed = parseCsv(text);
       setGames([...games, parsed]);
-      console.log(parsed);
+      saveGames([...games, parsed]);
     };
     reader.readAsText(file);
   }
 
-  // A simple CSV parser: assumes first line is headers, commas as separators
   function parseCsv(csvText) {
     const lines = csvText.trim().split("\n");
-    // const headers = headerLine.split(",").map((h) => h.trim());
     let trivia = [];
     let playersList = [];
     lines.map((line) => {
@@ -110,7 +130,7 @@ function App() {
         </button>
       </div>
       {playing ? (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 m-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-4 m-4">
           {games[playing - 1].trivia.map((obj) => {
             return (
               <div key={obj.category}>
@@ -125,14 +145,29 @@ function App() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 m-4">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-4 m-4">
             {games.map((obj, i) => {
+              const displayNone = i === 0 ? "invisible" : "";
               return (
                 <button
                   key={i}
-                  className="btn btn-xl block h-32 btn-primary"
+                  className="btn btn-xl block h-auto btn-primary p-1"
                   onClick={() => setPlaying(i + 1)}
                 >
+                  <div className="w-full flex items-end justify-end">
+                    <button
+                      className={
+                        "btn btn-sm border-accent-content " + displayNone
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const newGames = deleteGame(i);
+                        setGames(newGames);
+                      }}
+                    >
+                      x
+                    </button>
+                  </div>
                   <p className="underline">Game {i + 1}</p>
                   <p>No. of players: {obj.players.length}</p>
                   <p>No. of cards: {obj.trivia.length}</p>
@@ -140,12 +175,28 @@ function App() {
               );
             })}
           </div>
-          <input
-            onChange={handleFileChange}
-            type="file"
-            accept=".csv"
-            className="file-input file-input-xl"
-          />
+          <div className="flex gap-8 justify-center mt-8">
+            <div className="w-95">
+              <input
+                onChange={handleFileChange}
+                type="file"
+                accept=".csv"
+                className="file-input file-input-xl mb-4"
+              />
+              <img
+                src="/download.png"
+                alt="download example"
+                className="w-full"
+              />
+            </div>
+            <div>
+              <div className="flex items-center text-3xl h-14 mb-4">
+                <span className="mr-4">{"\u2B05"}</span>
+                Upload a .csv from Google Sheets in the structure shown below
+              </div>
+              <img src="/csv.png" alt="csv example" className="w-240" />
+            </div>
+          </div>
         </>
       )}
     </div>
@@ -176,7 +227,7 @@ function Card({ handleScore, trivia, players }) {
         right: "90px",
         height: isExpanded ? "700px" : "auto",
       }}
-      transition={{ duration: isExpanded ? 1 : 0.3 }}
+      transition={{ duration: isExpanded ? 0.7 : 0.2 }}
     >
       <div className="flex flex-wrap justify-center text-center h-full">
         {isExpanded && (
