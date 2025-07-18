@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { triviaQuestions } from "./example";
 
@@ -48,6 +48,21 @@ function App() {
                   ? { ...player, score: player.score + 1 }
                   : player
               ),
+            }
+          : game
+      )
+    );
+  }
+
+  function resetScore() {
+    setGames((prevGames) =>
+      prevGames.map((game, i) =>
+        i === playing - 1
+          ? {
+              ...game,
+              players: game.players.map((player) => {
+                return { ...player, score: 0 };
+              }),
             }
           : game
       )
@@ -123,7 +138,10 @@ function App() {
         </div>
         <button
           disabled={!playing}
-          onClick={() => setPlaying(0)}
+          onClick={() => {
+            setPlaying(0);
+            resetScore();
+          }}
           className="btn"
         >
           Back to select
@@ -175,7 +193,7 @@ function App() {
               );
             })}
           </div>
-          <div className="flex gap-8 justify-center mt-8">
+          <div className="flex gap-8 justify-center mt-12">
             <div className="w-95">
               <input
                 onChange={handleFileChange}
