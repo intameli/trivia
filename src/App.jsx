@@ -29,10 +29,10 @@ function App() {
   const [games, setGames] = useState(() => {
     const init = [{ trivia: triviaQuestions, players: startPlayers }];
     const load = loadGames();
-    if (load.length) {
+    if (load && load.length) {
       console.log(load);
     }
-    return load.length ? load : init;
+    return load && load.length ? load : init;
   });
   const [playing, setPlaying] = useState(0);
   const players = playing ? games[playing - 1].players : [];
