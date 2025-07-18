@@ -29,9 +29,6 @@ function App() {
   const [games, setGames] = useState(() => {
     const init = [{ trivia: triviaQuestions, players: startPlayers }];
     const load = loadGames();
-    if (load && load.length) {
-      console.log(load);
-    }
     return load && load.length ? load : init;
   });
   const [playing, setPlaying] = useState(0);
