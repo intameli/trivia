@@ -231,6 +231,8 @@ function Card({ handleScore, trivia, players }) {
 
   const bg = done ? "bg-blue-900" : "bg-primary";
 
+  const isInvisible = reveal ? "" : " invisible";
+
   return (
     <motion.div
       layout
@@ -263,7 +265,7 @@ function Card({ handleScore, trivia, players }) {
               <button onClick={() => setReveal(!reveal)} className="btn m-4">
                 {reveal ? "Hide answer" : "Show answer"}
               </button>
-              {reveal && <p className="text-2xl m-4">{trivia.answer}</p>}
+              <p className={"text-2xl m-4" + isInvisible}>{trivia.answer}</p>
               <div className="w-full flex gap-3 justify-center">
                 <select
                   value={winner}
