@@ -158,7 +158,7 @@ function App() {
           <div
             className="grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-4 m-4"
             onMouseMove={(e) => {
-              if (hovered) setPos({ x: e.clientX, y: e.clientY });
+              setPos({ x: e.clientX, y: e.clientY });
             }}
           >
             {games[playing - 1].trivia.map((obj, i) => {
