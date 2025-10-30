@@ -238,7 +238,7 @@ function Card({ handleScore, trivia, players }) {
       style={{
         position: isExpanded ? "absolute" : "static",
         fontSize: isExpanded ? "5rem" : "2rem",
-        cursor: isExpanded ? "default" : "pointer",
+        cursor: isExpanded || done ? "default" : "pointer",
         top: "100px",
         left: "100px",
         right: "90px",
