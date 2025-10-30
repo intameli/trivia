@@ -257,31 +257,14 @@ function Card({ handleScore, trivia, players, index, setHovered }) {
   const [winner, setWinner] = useState("Pick a winner");
   const [done, setDone] = useState(false);
   const [showHover, setShowHover] = useState(false);
-  const divRef = useRef(null);
-  const prevHeight = useRef(0);
 
+  //this useEffect prvents a bug where hovering is shown during closing animation
+  // kinda hacky but whatever
   useEffect(() => {
-    if (!divRef.current) return;
-
-    const observer = new ResizeObserver(() => {
-      const currentHeight = divRef.current.getBoundingClientRect().height;
-
-      // Compare with previous height
-      if (prevHeight.current !== 0 && prevHeight.current !== currentHeight) {
-        if (!isExpanded && done) {
-          // Height has finished changing to collapsed size
-          setShowHover(true);
-          console.log("Animation ended, hover enabled!");
-        }
-      }
-
-      prevHeight.current = currentHeight;
-    });
-
-    observer.observe(divRef.current);
-
-    return () => observer.disconnect();
-  }, [isExpanded, done]);
+    if (done) {
+      setShowHover(true);
+    }
+  }, [done]);
 
   const disableContinue = winner === "Pick a winner" ? true : false;
 
@@ -292,7 +275,6 @@ function Card({ handleScore, trivia, players, index, setHovered }) {
   return (
     <motion.div
       layout
-      ref={divRef}
       onClick={isExpanded || done ? null : () => setIsExpanded(!isExpanded)}
       onMouseEnter={() => {
         if (showHover) setHovered(index + 1);
