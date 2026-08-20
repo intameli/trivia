@@ -1,6 +1,11 @@
-import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { triviaQuestions } from "./example";
+
+const MotionButton = motion.button;
+const MotionDiv = motion.div;
+const MotionSection = motion.section;
 
 const startPlayers = [
   { name: "Jacob", score: 0 },
@@ -27,21 +32,21 @@ function deleteGame(index) {
 
 function App() {
   const [games, setGames] = useState(() => {
-    const init = [{ trivia: triviaQuestions, players: startPlayers }];
-    const load = loadGames();
-    return load && load.length ? load : init;
+    const initialGames = [{ trivia: triviaQuestions, players: startPlayers }];
+    const savedGames = loadGames();
+    return savedGames?.length ? savedGames : initialGames;
   });
   const [playing, setPlaying] = useState(0);
   const [winners, setWinners] = useState([]);
   const [hovered, setHovered] = useState(false);
-  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [pointerPosition, setPointerPosition] = useState({ x: 0, y: 0 });
 
   const players = playing ? games[playing - 1].players : [];
 
   function handleScore(targetName, index) {
-    setGames((prevGames) =>
-      prevGames.map((game, i) =>
-        i === playing - 1
+    setGames((previousGames) =>
+      previousGames.map((game, gameIndex) =>
+        gameIndex === playing - 1
           ? {
               ...game,
               players: game.players.map((player) =>
@@ -53,22 +58,23 @@ function App() {
           : game
       )
     );
-    setWinners(() => {
-      const newWinners = [...winners];
-      newWinners[index] = targetName;
-      return newWinners;
+    setWinners((previousWinners) => {
+      const nextWinners = [...previousWinners];
+      nextWinners[index] = targetName;
+      return nextWinners;
     });
   }
 
   function resetScore() {
-    setGames((prevGames) =>
-      prevGames.map((game, i) =>
-        i === playing - 1
+    setGames((previousGames) =>
+      previousGames.map((game, gameIndex) =>
+        gameIndex === playing - 1
           ? {
               ...game,
-              players: game.players.map((player) => {
-                return { ...player, score: 0 };
-              }),
+              players: game.players.map((player) => ({
+                ...player,
+                score: 0,
+              })),
             }
           : game
       )
@@ -80,21 +86,22 @@ function App() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target.result;
-      const parsed = parseCsv(text);
-      setGames([...games, parsed]);
-      saveGames([...games, parsed]);
+    reader.onload = (loadEvent) => {
+      const parsedGame = parseCsv(loadEvent.target.result);
+      const nextGames = [...games, parsedGame];
+      setGames(nextGames);
+      saveGames(nextGames);
     };
     reader.readAsText(file);
   }
 
   function parseCsv(csvText) {
     const lines = csvText.trim().split("\n");
-    let trivia = [];
-    let playersList = [];
-    lines.map((line) => {
-      const values = line.split(",").map((v) => v.trim());
+    const trivia = [];
+    const playersList = [];
+
+    lines.forEach((line) => {
+      const values = line.split(",").map((value) => value.trim());
       if (values[0]) {
         trivia.push({
           category: values[0],
@@ -106,148 +113,156 @@ function App() {
         playersList.push({ name: values[3], score: 0 });
       }
     });
-    return { trivia: trivia, players: playersList };
+
+    return { trivia, players: playersList };
   }
 
   return (
-    <div>
-      <div className="bg-blue-900 text-white p-4 rounded mb-4 flex justify-end items-center gap-2">
-        <div className="text-6xl mr-auto">Trivia</div>
-        <div className="dropdown dropdown-hover">
-          <div
-            disabled={!playing}
-            tabIndex={0}
-            role="button"
-            className="btn m-1"
-          >
-            Scores
+    <div className="app-shell">
+      <header className="site-header">
+        <h1>Trivia</h1>
+        <div className="header-actions">
+          <div className="dropdown dropdown-end">
+            <button
+              disabled={!playing}
+              tabIndex={0}
+              type="button"
+              className="btn"
+            >
+              Scores
+            </button>
+            {playing ? (
+              <ul
+                tabIndex={0}
+                className="menu dropdown-content score-menu rounded-box bg-base-100 p-2 shadow"
+              >
+                {players.map((player) => (
+                  <li key={player.name}>
+                    <p className="score-row">
+                      <span>{player.name}</span>
+                      <span>{player.score}</span>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
-          <ul
-            tabIndex={0}
-            className={
-              playing
-                ? "menu dropdown-content z-[1] p-2 shadow bg-base-100 rounded-box w-52"
-                : "invisible"
-            }
+          <button
+            disabled={!playing}
+            onClick={() => {
+              resetScore();
+              setPlaying(0);
+            }}
+            type="button"
+            className="btn"
           >
-            {players.map((player, i) => {
-              return (
-                <li>
-                  <p className="cursor-default">
-                    {player.name}
-                    <span style={{ marginLeft: "auto" }}>{player.score}</span>
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
+            Back to select
+          </button>
         </div>
-        <button
-          disabled={!playing}
-          onClick={() => {
-            setPlaying(0);
-            resetScore();
-          }}
-          className="btn"
-        >
-          Back to select
-        </button>
-      </div>
-      {playing ? (
-        <>
-          <div
-            className="grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-4 m-4"
-            onMouseMove={(e) => {
-              setPos({ x: e.clientX, y: e.clientY });
+      </header>
+
+      <main className="page-content">
+        {playing ? (
+          <section
+            aria-label="Trivia categories"
+            className="question-grid"
+            onMouseMove={(event) => {
+              setPointerPosition({ x: event.clientX, y: event.clientY });
             }}
           >
-            {games[playing - 1].trivia.map((obj, i) => {
-              return (
-                <div key={obj.category}>
-                  <Card
-                    handleScore={handleScore}
-                    trivia={obj}
-                    players={games[playing - 1].players}
-                    index={i}
-                    setHovered={setHovered}
-                  />
-                </div>
-              );
-            })}
-            {hovered && (
+            {games[playing - 1].trivia.map((trivia, index) => (
+              <Card
+                key={`${trivia.category}-${index}`}
+                handleScore={handleScore}
+                trivia={trivia}
+                players={games[playing - 1].players}
+                index={index}
+                setHovered={setHovered}
+              />
+            ))}
+            {hovered ? (
               <div
-                className="absolute z-50 p-2 rounded-lg shadow-lg bg-base-100 border border-base-300"
+                className="winner-tooltip rounded-lg border border-base-300 bg-base-100 p-2 shadow-lg"
                 style={{
-                  left: pos.x - 60,
-                  top: pos.y - 40,
-                  pointerEvents: "none", // prevents flickering
+                  left: pointerPosition.x,
+                  top: pointerPosition.y,
                 }}
               >
                 <p className="text-sm">Won by {winners[hovered - 1]}</p>
               </div>
-            )}
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-4 m-4">
-            {games.map((obj, i) => {
-              const displayNone = i === 0 ? "invisible" : "";
-              return (
-                <button
-                  key={i}
-                  className="btn btn-xl block h-auto btn-primary p-1"
-                  onClick={() => {
-                    setWinners(games[i].trivia.map(() => "No Winner"));
-                    setPlaying(i + 1);
-                  }}
-                >
-                  <div className="w-full flex items-end justify-end">
-                    <button
-                      className={
-                        "btn btn-sm border-accent-content " + displayNone
-                      }
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const newGames = deleteGame(i);
-                        setGames(newGames);
-                      }}
-                    >
-                      x
-                    </button>
-                  </div>
-                  <p className="underline">Game {i + 1}</p>
-                  <p>No. of players: {obj.players.length}</p>
-                  <p>No. of cards: {obj.trivia.length}</p>
-                </button>
-              );
-            })}
-          </div>
-          <div className="flex gap-8 justify-center mt-12">
-            <div className="w-95">
-              <input
-                onChange={handleFileChange}
-                type="file"
-                accept=".csv"
-                className="file-input file-input-xl mb-4"
-              />
-              <img
-                src="/download.png"
-                alt="download example"
-                className="w-full"
-              />
-            </div>
-            <div>
-              <div className="flex items-center text-3xl h-14 mb-4">
-                <span className="mr-4">{"\u2B05"}</span>
-                Upload a .csv from Google Sheets in the structure shown below
-              </div>
-              <img src="/csv.png" alt="csv example" className="w-240" />
-            </div>
-          </div>
-        </>
-      )}
+            ) : null}
+          </section>
+        ) : (
+          <GameSelect
+            games={games}
+            handleFileChange={handleFileChange}
+            onDelete={(index) => {
+              const nextGames = deleteGame(index);
+              if (nextGames) setGames(nextGames);
+            }}
+            onPlay={(index) => {
+              setWinners(games[index].trivia.map(() => "No Winner"));
+              setPlaying(index + 1);
+            }}
+          />
+        )}
+      </main>
     </div>
+  );
+}
+
+function GameSelect({ games, handleFileChange, onDelete, onPlay }) {
+  return (
+    <>
+      <section aria-label="Saved games" className="game-grid">
+        {games.map((game, index) => (
+          <article className="game-card" key={index}>
+            {index > 0 ? (
+              <button
+                aria-label={`Delete game ${index + 1}`}
+                className="btn btn-sm game-delete"
+                onClick={() => onDelete(index)}
+                type="button"
+              >
+                ×
+              </button>
+            ) : null}
+            <button
+              className="game-card-main"
+              onClick={() => onPlay(index)}
+              type="button"
+            >
+              <span className="game-title">Game {index + 1}</span>
+              <span>No. of players: {game.players.length}</span>
+              <span>No. of cards: {game.trivia.length}</span>
+            </button>
+          </article>
+        ))}
+      </section>
+
+      <section className="upload-guide" aria-labelledby="upload-heading">
+        <div className="upload-control">
+          <h2 id="upload-heading">Add another game</h2>
+          <p>Upload a .csv exported from Google Sheets.</p>
+          <input
+            aria-label="Upload trivia CSV"
+            onChange={handleFileChange}
+            type="file"
+            accept=".csv,text/csv"
+            className="file-input file-input-lg"
+          />
+          <img
+            src="/download.png"
+            alt="Google Sheets download menu with comma-separated values selected"
+          />
+        </div>
+        <div className="csv-example">
+          <h2>Use this column structure</h2>
+          <p>Category, question, answer, and player name.</p>
+          <img src="/csv.png" alt="Example trivia CSV column structure" />
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -257,99 +272,159 @@ function Card({ handleScore, trivia, players, index, setHovered }) {
   const [winner, setWinner] = useState("Pick a winner");
   const [done, setDone] = useState(false);
   const [showHover, setShowHover] = useState(false);
+  const closeButtonRef = useRef(null);
 
-  //this useEffect prvents a bug where hovering is shown during closing animation
-  // kinda hacky but whatever
+  function closeQuestion() {
+    setIsExpanded(false);
+    setReveal(false);
+  }
+
   useEffect(() => {
-    if (done) {
-      setShowHover(true);
-    }
+    if (done) setShowHover(true);
   }, [done]);
 
-  const disableContinue = winner === "Pick a winner" ? true : false;
+  useEffect(() => {
+    if (!isExpanded) return undefined;
 
-  const bg = done ? "bg-blue-900" : "bg-primary";
+    const scrollPosition = window.scrollY;
+    const bodyStyle = document.body.style;
+    const originalBodyStyles = {
+      position: bodyStyle.position,
+      top: bodyStyle.top,
+      left: bodyStyle.left,
+      right: bodyStyle.right,
+      width: bodyStyle.width,
+      overflow: bodyStyle.overflow,
+    };
 
-  const isInvisible = reveal ? "" : " invisible";
+    bodyStyle.position = "fixed";
+    bodyStyle.top = `-${scrollPosition}px`;
+    bodyStyle.left = "0";
+    bodyStyle.right = "0";
+    bodyStyle.width = "100%";
+    bodyStyle.overflow = "hidden";
 
-  return (
-    <motion.div
-      layout
-      onClick={isExpanded || done ? null : () => setIsExpanded(!isExpanded)}
-      onMouseEnter={() => {
-        if (showHover) setHovered(index + 1);
-      }}
-      onMouseLeave={() => {
-        if (showHover) setHovered(false);
-      }}
-      className={"border-2 rounded-2xl p-2 " + bg}
-      style={{
-        position: isExpanded ? "absolute" : "static",
-        fontSize: isExpanded ? "5rem" : "2rem",
-        cursor: isExpanded || done ? "default" : "pointer",
-        top: "100px",
-        left: "100px",
-        right: "90px",
-        height: isExpanded ? "700px" : "auto",
-      }}
-      transition={{ duration: isExpanded ? 0.7 : 0.2 }}
-    >
-      <div className="flex flex-wrap justify-center text-center h-full">
-        {isExpanded && (
-          <div className="w-full flex justify-end">
-            <div
-              onClick={() => {
-                setIsExpanded(!isExpanded);
-                setReveal(false);
-              }}
-              className="btn"
-            >
-              Close
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") closeQuestion();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    closeButtonRef.current?.focus();
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      Object.assign(bodyStyle, originalBodyStyles);
+      window.scrollTo(0, scrollPosition);
+    };
+  }, [isExpanded]);
+
+  const dialog = (
+    <AnimatePresence>
+      {isExpanded ? (
+        <MotionDiv
+          animate={{ opacity: 1 }}
+          className="question-overlay"
+          exit={{ opacity: 0 }}
+          initial={{ opacity: 0 }}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeQuestion();
+          }}
+        >
+          <MotionSection
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            aria-labelledby={`question-category-${index}`}
+            aria-modal="true"
+            className="question-modal"
+            exit={{ opacity: 0, scale: 0.98, y: 12 }}
+            initial={{ opacity: 0, scale: 0.98, y: 12 }}
+            role="dialog"
+            transition={{ duration: 0.2 }}
+          >
+            <div className="question-modal-header">
+              <p id={`question-category-${index}`} className="question-category">
+                {trivia.category}
+              </p>
+              <button
+                ref={closeButtonRef}
+                onClick={closeQuestion}
+                type="button"
+                className="btn btn-sm"
+              >
+                Close
+              </button>
             </div>
-          </div>
-        )}
-        <div className="w-full">{trivia.category}</div>
-        {isExpanded && (
-          <>
-            <p className="text-6xl mt-10 mb-12 w-full">{trivia.question}</p>
-            <div className="flex flex-col h-auto w-full">
-              <button onClick={() => setReveal(!reveal)} className="btn m-4">
+
+            <div className="question-modal-body">
+              <p className="question-copy">{trivia.question}</p>
+              <button
+                aria-expanded={reveal}
+                onClick={() => setReveal((isRevealed) => !isRevealed)}
+                type="button"
+                className="btn answer-toggle"
+              >
                 {reveal ? "Hide answer" : "Show answer"}
               </button>
-              <p className={"text-2xl m-4" + isInvisible}>{trivia.answer}</p>
-              <div className="w-full flex gap-3 justify-center">
+              <p
+                aria-hidden={!reveal}
+                className={`answer-copy${reveal ? " is-visible" : ""}`}
+              >
+                {trivia.answer}
+              </p>
+
+              <div className="winner-controls">
                 <select
+                  aria-label="Question winner"
                   value={winner}
-                  onChange={(e) => {
-                    setWinner(e.target.value);
-                  }}
+                  onChange={(event) => setWinner(event.target.value)}
                   className="select"
                 >
-                  <option disabled={true}>Pick a winner</option>
+                  <option disabled>Pick a winner</option>
                   <option>No winner</option>
                   {players.map((player) => (
-                    <option>{player.name}</option>
+                    <option key={player.name}>{player.name}</option>
                   ))}
                 </select>
                 <button
-                  disabled={disableContinue}
+                  disabled={winner === "Pick a winner"}
                   onClick={() => {
-                    setIsExpanded(!isExpanded);
+                    setIsExpanded(false);
                     setDone(true);
-                    if (winner !== "No winner") {
-                      handleScore(winner, index);
-                    }
+                    if (winner !== "No winner") handleScore(winner, index);
                   }}
+                  type="button"
                   className="btn"
                 >
-                  continue
+                  Continue
                 </button>
               </div>
             </div>
-          </>
-        )}
-      </div>
-    </motion.div>
+          </MotionSection>
+        </MotionDiv>
+      ) : null}
+    </AnimatePresence>
+  );
+
+  return (
+    <>
+      <MotionButton
+        aria-disabled={done}
+        aria-label={`${trivia.category}${done ? `, answered by ${winner}` : ""}`}
+        className={`question-card${done ? " is-done" : ""}`}
+        layout
+        onClick={() => {
+          if (!done) setIsExpanded(true);
+        }}
+        onMouseEnter={() => {
+          if (showHover) setHovered(index + 1);
+        }}
+        onMouseLeave={() => setHovered(false)}
+        type="button"
+      >
+        <span>{trivia.category}</span>
+        {done ? <span className="answered-label">Answered</span> : null}
+      </MotionButton>
+      {typeof document !== "undefined" ? createPortal(dialog, document.body) : null}
+    </>
   );
 }
 
