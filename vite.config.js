@@ -5,4 +5,17 @@ import tailwindcss from "@tailwindcss/vite";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("/@firebase/webchannel-wrapper/"))
+            return "firebase-transport";
+          if (id.includes("/@firebase/firestore/")) return "firebase-firestore";
+          if (id.includes("/@firebase/auth/")) return "firebase-auth";
+          if (id.includes("/@firebase/")) return "firebase-core";
+        },
+      },
+    },
+  },
 });

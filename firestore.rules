@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function room(code) { return get(/databases/$(database)/documents/feudRooms/$(code)); }
+    function active(code) { return room(code).data.expiresAt > request.time; }
+    function owner(code) { return signedIn() && room(code).data.ownerUid == request.auth.uid; }
+    function controller(code) {
+      return signedIn() && (owner(code) || exists(/databases/$(database)/documents/feudRooms/$(code)/controllers/$(request.auth.uid)));
+    }
+    function validGame(game) {
+      return game is map && game.keys().hasOnly(['version', 'questionIndex', 'teams', 'boards', 'finished'])
+        && game.version == 1 && game.questionIndex is int && game.questionIndex >= 0 && game.questionIndex < 30
+        && game.teams is list && game.teams.size() == 2 && game.boards is map && game.boards.size() == 30
+        && game.finished is bool
+        && game.teams[0].name is string && game.teams[0].name.size() > 0 && game.teams[0].name.size() <= 30
+        && game.teams[1].name is string && game.teams[1].name.size() > 0 && game.teams[1].name.size() <= 30
+        && game.teams[0].score is int && game.teams[0].score >= 0 && game.teams[0].score <= 3000
+        && game.teams[1].score is int && game.teams[1].score >= 0 && game.teams[1].score <= 3000;
+    }
+    match /feudRooms/{code} {
+      // A room code grants viewing, never control. Collection enumeration is denied.
+      allow get: if signedIn() && (resource == null || resource.data.expiresAt > request.time);
+      allow list: if false;
+      allow create: if signedIn() && code.matches('^[A-HJ-NP-Z2-9]{6}$')
+        && request.resource.data.keys().hasOnly(['ownerUid', 'createdAt', 'expiresAt', 'game'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt <= request.time + duration.value(8, 'd')
+        && validGame(request.resource.data.game);
+      allow update: if controller(code) && resource.data.expiresAt > request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['game'])
+        && validGame(request.resource.data.game);
+      allow delete: if owner(code);
+      match /controllers/{uid} {
+        allow get: if signedIn() && (request.auth.uid == uid || owner(code));
+        allow list: if owner(code);
+        allow create: if signedIn() && request.auth.uid == uid && active(code)
+          && request.resource.data.keys().hasOnly(['key'])
+          && request.resource.data.key == get(/databases/$(database)/documents/feudKeys/$(code)).data.key;
+        allow update: if false;
+        allow delete: if owner(code);
+      }
+    }
+    match /feudKeys/{code} {
+      allow get: if owner(code);
+      allow list: if false;
+      allow create: if signedIn()
+        && getAfter(/databases/$(database)/documents/feudRooms/$(code)).data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['key'])
+        && request.resource.data.key is string && request.resource.data.key.size() == 32;
+      allow update: if false;
+      allow delete: if owner(code);
+    }
+  }
+}

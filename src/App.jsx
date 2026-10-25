@@ -30,7 +30,7 @@ function deleteGame(index) {
   return games;
 }
 
-function App() {
+function App({ onChangeMode }) {
   const [games, setGames] = useState(() => {
     const initialGames = [{ trivia: triviaQuestions, players: startPlayers }];
     const savedGames = loadGames();
@@ -122,6 +122,7 @@ function App() {
       <header className="site-header">
         <h1>Trivia</h1>
         <div className="header-actions">
+          <button type="button" className="btn" onClick={onChangeMode}>Game modes</button>
           <div className="dropdown dropdown-end">
             <button
               disabled={!playing}
