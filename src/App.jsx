@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { triviaQuestions } from "./example";
+import { loadGames, parseCsv, saveGames } from "./trivia.js";
 
 const MotionButton = motion.button;
 const MotionDiv = motion.div;
@@ -13,23 +14,6 @@ const startPlayers = [
   { name: "Nathan", score: 0 },
 ];
 
-function saveGames(games) {
-  localStorage.setItem("triviaGames", JSON.stringify(games));
-}
-
-function loadGames() {
-  const savedGames = localStorage.getItem("triviaGames");
-  return JSON.parse(savedGames);
-}
-
-function deleteGame(index) {
-  const games = loadGames();
-  if (!games || index < 0 || index >= games.length) return;
-  games.splice(index, 1);
-  saveGames(games);
-  return games;
-}
-
 function App({ onChangeMode }) {
   const [games, setGames] = useState(() => {
     const initialGames = [{ trivia: triviaQuestions, players: startPlayers }];
@@ -40,17 +24,27 @@ function App({ onChangeMode }) {
   const [winners, setWinners] = useState([]);
   const [hovered, setHovered] = useState(false);
   const [pointerPosition, setPointerPosition] = useState({ x: 0, y: 0 });
+  const [importError, setImportError] = useState("");
+  const [storageError, setStorageError] = useState("");
+
+  useEffect(() => {
+    setStorageError(
+      saveGames(games)
+        ? ""
+        : "Browser storage is unavailable. You can play, but changes won’t be saved when this page closes or reloads."
+    );
+  }, [games]);
 
   const players = playing ? games[playing - 1].players : [];
 
-  function handleScore(targetName, index) {
+  function handleScore(targetPlayer, index) {
     setGames((previousGames) =>
       previousGames.map((game, gameIndex) =>
         gameIndex === playing - 1
           ? {
               ...game,
-              players: game.players.map((player) =>
-                player.name === targetName
+              players: game.players.map((player, playerIndex) =>
+                playerIndex === targetPlayer
                   ? { ...player, score: player.score + 1 }
                   : player
               ),
@@ -60,15 +54,16 @@ function App({ onChangeMode }) {
     );
     setWinners((previousWinners) => {
       const nextWinners = [...previousWinners];
-      nextWinners[index] = targetName;
+      nextWinners[index] =
+        targetPlayer === null ? "No winner" : players[targetPlayer].name;
       return nextWinners;
     });
   }
 
-  function resetScore() {
+  function resetScore(index = playing - 1) {
     setGames((previousGames) =>
       previousGames.map((game, gameIndex) =>
-        gameIndex === playing - 1
+        gameIndex === index
           ? {
               ...game,
               players: game.players.map((player) => ({
@@ -84,37 +79,21 @@ function App({ onChangeMode }) {
   function handleFileChange(event) {
     const file = event.target.files[0];
     if (!file) return;
+    event.target.value = "";
+    setImportError("");
 
     const reader = new FileReader();
     reader.onload = (loadEvent) => {
-      const parsedGame = parseCsv(loadEvent.target.result);
-      const nextGames = [...games, parsedGame];
-      setGames(nextGames);
-      saveGames(nextGames);
+      try {
+        const parsedGame = parseCsv(loadEvent.target.result);
+        setGames((previousGames) => [...previousGames, parsedGame]);
+      } catch (error) {
+        setImportError(error.message);
+      }
     };
+    reader.onerror = () =>
+      setImportError("Could not read this CSV. Try selecting the file again.");
     reader.readAsText(file);
-  }
-
-  function parseCsv(csvText) {
-    const lines = csvText.trim().split("\n");
-    const trivia = [];
-    const playersList = [];
-
-    lines.forEach((line) => {
-      const values = line.split(",").map((value) => value.trim());
-      if (values[0]) {
-        trivia.push({
-          category: values[0],
-          question: values[1],
-          answer: values[2],
-        });
-      }
-      if (values[3]) {
-        playersList.push({ name: values[3], score: 0 });
-      }
-    });
-
-    return { trivia, players: playersList };
   }
 
   return (
@@ -137,8 +116,8 @@ function App({ onChangeMode }) {
                 tabIndex={0}
                 className="menu dropdown-content score-menu rounded-box bg-base-100 p-2 shadow"
               >
-                {players.map((player) => (
-                  <li key={player.name}>
+                {players.map((player, index) => (
+                  <li key={index}>
                     <p className="score-row">
                       <span>{player.name}</span>
                       <span>{player.score}</span>
@@ -152,6 +131,7 @@ function App({ onChangeMode }) {
             disabled={!playing}
             onClick={() => {
               resetScore();
+              setHovered(false);
               setPlaying(0);
             }}
             type="button"
@@ -163,6 +143,16 @@ function App({ onChangeMode }) {
       </header>
 
       <main className="page-content">
+        {storageError ? (
+          <p role="alert" className="alert alert-warning">
+            {storageError}
+          </p>
+        ) : null}
+        {importError ? (
+          <p role="alert" className="alert alert-error">
+            {importError}
+          </p>
+        ) : null}
         {playing ? (
           <section
             aria-label="Trivia categories"
@@ -198,10 +188,14 @@ function App({ onChangeMode }) {
             games={games}
             handleFileChange={handleFileChange}
             onDelete={(index) => {
-              const nextGames = deleteGame(index);
-              if (nextGames) setGames(nextGames);
+              setGames((previousGames) =>
+                previousGames.filter((_, gameIndex) => gameIndex !== index)
+              );
             }}
             onPlay={(index) => {
+              // Answered cards reset on selection, so scores must reset with them.
+              resetScore(index);
+              setHovered(false);
               setWinners(games[index].trivia.map(() => "No Winner"));
               setPlaying(index + 1);
             }}
@@ -270,10 +264,12 @@ function GameSelect({ games, handleFileChange, onDelete, onPlay }) {
 function Card({ handleScore, trivia, players, index, setHovered }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [reveal, setReveal] = useState(false);
-  const [winner, setWinner] = useState("Pick a winner");
+  const [winner, setWinner] = useState("");
   const [done, setDone] = useState(false);
   const [showHover, setShowHover] = useState(false);
   const closeButtonRef = useRef(null);
+  const winnerName =
+    winner === "no-winner" ? "No winner" : players[Number(winner)]?.name;
 
   function closeQuestion() {
     setIsExpanded(false);
@@ -379,18 +375,25 @@ function Card({ handleScore, trivia, players, index, setHovered }) {
                   onChange={(event) => setWinner(event.target.value)}
                   className="select"
                 >
-                  <option disabled>Pick a winner</option>
-                  <option>No winner</option>
-                  {players.map((player) => (
-                    <option key={player.name}>{player.name}</option>
+                  <option value="" disabled>
+                    Pick a winner
+                  </option>
+                  <option value="no-winner">No winner</option>
+                  {players.map((player, playerIndex) => (
+                    <option key={playerIndex} value={playerIndex}>
+                      {player.name}
+                    </option>
                   ))}
                 </select>
                 <button
-                  disabled={winner === "Pick a winner"}
+                  disabled={winner === "" || done}
                   onClick={() => {
                     setIsExpanded(false);
                     setDone(true);
-                    if (winner !== "No winner") handleScore(winner, index);
+                    handleScore(
+                      winner === "no-winner" ? null : Number(winner),
+                      index
+                    );
                   }}
                   type="button"
                   className="btn"
@@ -409,7 +412,7 @@ function Card({ handleScore, trivia, players, index, setHovered }) {
     <>
       <MotionButton
         aria-disabled={done}
-        aria-label={`${trivia.category}${done ? `, answered by ${winner}` : ""}`}
+        aria-label={`${trivia.category}${done ? `, answered by ${winnerName}` : ""}`}
         className={`question-card${done ? " is-done" : ""}`}
         layout
         onClick={() => {

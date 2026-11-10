@@ -13,6 +13,8 @@ You can also start on a phone with **Phone controller** selected, then enter its
 
 The original Trivia game remains available at `?mode=trivia`, including saved local games and CSV imports. Its gameplay and existing `triviaGames` storage are unchanged.
 
+Trivia CSVs use category, question, answer, and player name columns, with an optional header row. Quoted commas, quotation marks, multiline cells, and extra player-only rows are supported. Invalid imports show an error without adding a game. If browser storage is blocked or full, games remain playable for the current page session and a warning explains that changes cannot be saved. Selecting a game starts a fresh scorecard.
+
 ## Firebase
 
 The app uses the supplied `family-1225b` project with **Cloud Firestore Standard** in **Sydney (`australia-southeast1`)** and **Anonymous Authentication**. Firebase Analytics is not required for gameplay and is not initialized.
@@ -43,7 +45,7 @@ pnpm lint
 pnpm build
 ```
 
-`pnpm test` checks question data, scoring, duplicate awards, stale actions, navigation, strikes, and finishing. It does not contact Firebase.
+`pnpm test` checks question data, scoring, duplicate awards, stale actions, navigation, strikes, finishing, CSV parsing, and saved-game validation. It does not contact Firebase.
 
 Integration checks use separate anonymous owner, phone, and viewer accounts to test pairing, live updates, concurrent writes, and denied operations. They delete the disposable test room and accounts afterward. Run with Firebase's Auth and Firestore emulators (requires Firebase CLI and a supported Java runtime):
 

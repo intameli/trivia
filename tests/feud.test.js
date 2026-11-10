@@ -115,7 +115,26 @@ test("finish freezes gameplay and resume restores the same board", () => {
   assert.equal(applyAction(game, { type: "strike" }), game);
   assert.equal(applyAction(game, { type: "revealAll" }), game);
   assert.equal(applyAction(game, { type: "award", team: 0 }), game);
+  assert.equal(
+    applyAction(game, { type: "question", index: 1, questionIndex: 0 }),
+    game,
+  );
   game = applyAction(game, { type: "resume" });
   assert.equal(game.finished, false);
   assert.equal(boardPoints(game), 30);
+  game = applyAction(game, { type: "question", index: 1 });
+  assert.equal(game.questionIndex, 1);
+});
+
+test("a delayed navigation confirmation cannot move another controller’s question", () => {
+  let game = applyAction(createGame(), { type: "reveal", index: 0 });
+  const confirmation = {
+    type: "question",
+    index: 1,
+    questionIndex: game.questionIndex,
+  };
+  game = applyAction(game, { type: "question", index: 5 });
+  assert.equal(applyAction(game, confirmation), game);
+  assert.equal(game.questionIndex, 5);
+  assert.equal(game.boards["1"].revealed[0], 0);
 });

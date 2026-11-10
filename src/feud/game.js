@@ -86,13 +86,13 @@ export function applyAction(game, action) {
       break;
     case "question":
       if (
+        game.finished ||
         !Number.isInteger(action.index) ||
         action.index < 0 ||
         action.index >= questions.length
       )
         return game;
       next.questionIndex = action.index;
-      next.finished = false;
       break;
     case "finish":
       next.finished = true;

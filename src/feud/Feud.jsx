@@ -76,6 +76,13 @@ export default function Feud() {
           if (!cancelled) {
             setGame(nextGame);
             setSynced(connected);
+            setConfirmNext((confirmation) =>
+              confirmation?.questionIndex === nextGame.questionIndex &&
+              !nextGame.finished &&
+              currentBoard(nextGame).awardedTo === null
+                ? confirmation
+                : null,
+            );
           }
         },
         (failure) => {
@@ -386,7 +393,10 @@ export default function Feud() {
                       currentBoard(game).awardedTo === null &&
                       boardPoints(game) > 0
                     )
-                      setConfirmNext(index);
+                      setConfirmNext({
+                        index,
+                        questionIndex: game.questionIndex,
+                      });
                     else act({ type: "question", index });
                   }}
                 />
@@ -507,11 +517,11 @@ export default function Feud() {
             className="feud-button primary"
             disabled={locked}
             onClick={() => {
-              act({ type: "question", index: confirmNext });
+              act({ type: "question", ...confirmNext });
               setConfirmNext(null);
             }}
           >
-            Move to question {confirmNext + 1}
+            Move to question {confirmNext.index + 1}
           </button>
           <button className="feud-button" onClick={() => setConfirmNext(null)}>
             Stay and award points
