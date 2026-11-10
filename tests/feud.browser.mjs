@@ -478,16 +478,14 @@ test("phone creates the game and the default display joins by code", async ({
     await phone
       .getByRole("button", { name: "Create game →", exact: true })
       .click();
-    await expect(
-      phone.getByRole("dialog", { name: "Connect TV" }),
-    ).toBeVisible();
-    await expect(phone.locator(".feud-room-code")).toHaveText("ABC234");
     await expect(phone).toHaveURL(/view=controller#key=test$/);
     expect(server.creations).toEqual([["Team Mango", "Team Samosa"]]);
-    await phone
-      .getByRole("button", { name: "Ready to host", exact: true })
-      .click();
     await expect(phone.locator(".controller-answer")).toHaveCount(5);
+    await expect(
+      phone.getByRole("dialog", { name: "Connect TV" }),
+    ).toHaveCount(0);
+    await expect(phone.locator(".feud-game-meta")).toContainText("ABC234");
+    await expect(phone.locator(".controller-answer").first()).toBeEnabled();
     await phone.getByRole("button", { name: "Connect TV", exact: true }).click();
     await expect(phone.locator(".feud-room-code")).toHaveText("ABC234");
     await phone.getByRole("button", { name: "Close dialog" }).click();

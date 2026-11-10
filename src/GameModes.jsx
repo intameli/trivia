@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import App from "./App.jsx";
+import FeudLogo from "./feud/FeudLogo.jsx";
 import "./feud/feud.css";
 
 const Feud = lazy(() => import("./feud/Feud.jsx"));
@@ -36,7 +37,7 @@ export default function GameModes() {
       <div className="mode-cards">
         <a className="mode-card trivia-mode" href="?mode=trivia">
           <span className="mode-number">01 / THE CLASSIC</span>
-          <span className="mode-symbol">?</span>
+          <span className="mode-symbol" aria-hidden="true">?</span>
           <h2>Trivia</h2>
           <p>
             Big questions. Bragging rights.
@@ -49,9 +50,9 @@ export default function GameModes() {
         </a>
         <a className="mode-card feud-mode" href="?mode=feud">
           <span className="mode-number">02 / DESI EDITION</span>
-          <span className="mode-symbol">✦</span>
+          <span className="mode-feud-logo" aria-hidden="true"><FeudLogo /></span>
           <h2>Desi Feud</h2>
-          <p>30 questions. Two teams.</p>
+          <p>Top answers. Big family energy.<br />30 questions. Two teams. One winning side.</p>
           <span className="mode-cta">
             Play <span>↗</span>
           </span>

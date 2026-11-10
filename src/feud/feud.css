@@ -2,17 +2,20 @@
 .mode-page,
 .feud-shell,
 .feud-loading {
-  --feud-bg: #101917;
-  --feud-panel: #182420;
-  --feud-line: #34413a;
-  --feud-muted: #a8b5ab;
-  --feud-cream: #f4efd9;
-  --feud-gold: #ecc46d;
-  --feud-orange: #e88e64;
+  --feud-bg: #061436;
+  --feud-panel: #0c2453;
+  --feud-line: #35578d;
+  --feud-muted: #afc4e7;
+  --feud-white: #f5f8ff;
+  --feud-gold: #ffd16c;
+  --feud-cyan: #8cdbff;
+  --feud-shadow: 0 1rem 3rem #02091966;
   min-height: 100dvh;
-  color: var(--feud-cream);
+  color: var(--feud-white);
   background:
-    radial-gradient(ellipse at 80% 5%, #2c3b2b80, transparent 50%),
+    radial-gradient(circle at 1px 1px, #8fb9ff0a 1px, transparent 0) 0 0 / 24px 24px,
+    radial-gradient(ellipse at 50% 0%, #1c56ad80, transparent 65%),
+    radial-gradient(ellipse at 100% 70%, #10357350, transparent 50%),
     var(--feud-bg);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
@@ -38,12 +41,42 @@
   display: grid;
   place-items: center;
 }
+/* A native wordmark with the oval gold trim of a game-show set. */
+.feud-logo {
+  display: inline-grid;
+  place-items: center;
+  width: 13rem;
+  aspect-ratio: 2 / 1;
+  padding: 0.8rem 1.6rem;
+  border: 3px solid var(--feud-gold);
+  border-radius: 50%;
+  outline: 1px solid #ffd16c80;
+  outline-offset: 5px;
+  background: radial-gradient(ellipse at 50% 20%, #3279d4, #0e3475 75%);
+  box-shadow: 0 0 0 10px #16366a, 0 0 0 11px #5a7dad, 0 0 2.5rem #2b79ed40;
+  transform: rotate(-6deg);
+  color: var(--feud-gold);
+  text-align: center;
+  text-shadow: 0 3px 0 #081c46;
+}
+.feud-logo > span {
+  font-family: "Arial Black", ui-sans-serif, system-ui, sans-serif;
+  font-size: 2rem;
+  font-weight: 950;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+}
+.feud-logo strong {
+  display: block;
+  font-size: 1.4em;
+  font-weight: inherit;
+}
 .feud-wordmark {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
   font-size: 1.1rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   font-weight: 900;
   white-space: nowrap;
 }
@@ -64,21 +97,22 @@
   padding: 2.5rem max(1.25rem, calc((100vw - 1150px) / 2));
 }
 .mode-intro {
-  padding: 4.5rem 0 3rem;
+  padding: 3.5rem 0 2.5rem;
 }
 .mode-intro h1,
 .feud-lobby h1 {
   margin: 1.1rem 0;
   font-size: clamp(3.5rem, 7vw, 6.5rem);
-  font-weight: 650;
-  letter-spacing: -0.065em;
+  font-weight: 900;
+  letter-spacing: -0.055em;
   line-height: 1.02;
 }
 .mode-intro em,
 .feud-lobby em {
   color: var(--feud-gold);
-  font-family: Georgia, serif;
-  font-weight: 400;
+  font-family: inherit;
+  font-weight: 900;
+  font-style: normal;
 }
 .mode-intro > p:last-child,
 .feud-lobby-intro > p:not(.feud-eyebrow) {
@@ -95,9 +129,10 @@
   position: relative;
   display: block;
   padding: 1.8rem 2rem;
-  border: 1px solid #3e4c40;
-  border-radius: 1.3rem;
-  background: #233027;
+  border: 1px solid var(--feud-line);
+  border-radius: 1rem;
+  box-shadow: var(--feud-shadow);
+  background: linear-gradient(135deg, #102d61, #091d42);
   transition:
     transform 0.2s,
     border-color 0.2s;
@@ -108,8 +143,8 @@
   border-color: var(--feud-gold);
 }
 .mode-card.feud-mode {
-  background: #3a3021;
-  border-color: #665238;
+  background: linear-gradient(135deg, #164a9b, #0c2860);
+  border-color: #5b86c5;
 }
 .mode-number {
   position: relative;
@@ -117,7 +152,7 @@
   font-size: 0.65rem;
   letter-spacing: 0.13em;
   font-weight: 700;
-  color: #d0d2b9;
+  color: var(--feud-cyan);
 }
 .mode-card h2 {
   position: relative;
@@ -128,7 +163,7 @@
 }
 .mode-card p {
   position: relative;
-  color: #bbbeac;
+  color: #c2d2ed;
   line-height: 1.7;
   font-size: 0.95rem;
 }
@@ -142,8 +177,18 @@
     serif;
   line-height: 1;
 }
-.feud-mode .mode-symbol {
-  color: #ecc46d24;
+.mode-feud-logo {
+  position: absolute;
+  right: 2rem;
+  top: 2.6rem;
+  pointer-events: none;
+}
+.mode-feud-logo .feud-logo {
+  width: 9rem;
+  opacity: 0.9;
+}
+.mode-feud-logo .feud-logo > span {
+  font-size: 1.35rem;
 }
 .mode-cta {
   display: flex;
@@ -199,7 +244,7 @@
   border: 1px solid var(--feud-line);
   border-radius: 0.5rem;
   background: #ffffff05;
-  color: var(--feud-cream);
+  color: var(--feud-white);
   font-size: 0.82rem;
   font-weight: 650;
   line-height: 1.3;
@@ -210,20 +255,20 @@
 }
 .feud-button:hover:not(:disabled) {
   background: #ffffff12;
-  border-color: #80917e;
+  border-color: #82b4fc;
 }
 .feud-shell .feud-button.primary {
   background: var(--feud-gold);
   border-color: var(--feud-gold);
-  color: #242415;
+  color: #152142;
 }
 .feud-button.primary:hover:not(:disabled) {
-  background: #f5d796;
+  background: #ffe1a0;
 }
 .feud-shell .feud-button.secondary {
-  background: #d89975;
-  border-color: #d89975;
-  color: #211c14;
+  background: var(--feud-cyan);
+  border-color: var(--feud-cyan);
+  color: #092747;
 }
 .feud-button.subtle {
   min-height: 2.3rem;
@@ -265,15 +310,25 @@
   gap: clamp(2rem, 6vw, 7rem);
   align-items: center;
   max-width: 1150px;
-  margin: 4.5rem auto 3rem;
+  margin: clamp(3rem, 8vh, 6rem) auto 3rem;
+}
+.feud-lobby-intro > .feud-logo {
+  margin: 0.5rem 0 2.2rem 0.7rem;
 }
 .feud-lobby h1 {
-  font-size: clamp(3.3rem, 5.4vw, 5.5rem);
+  font-size: clamp(3.3rem, 5.4vw, 5.1rem);
+  text-wrap: balance;
 }
+.feud-lobby-intro > .feud-eyebrow {
+  color: var(--feud-cyan);
+}
+
 .feud-facts {
   display: flex;
   gap: 2.4rem;
   margin-top: 2.2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--feud-line);
 }
 .feud-facts span {
   display: flex;
@@ -283,10 +338,10 @@
   font-size: 0.75rem;
 }
 .feud-facts strong {
-  font:
-    2.5rem Georgia,
-    serif;
-  color: var(--feud-cream);
+  font-size: 2.3rem;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  color: var(--feud-white);
 }
 .feud-setup {
   display: flex;
@@ -295,8 +350,9 @@
 }
 .feud-panel {
   padding: 1.8rem;
-  background: var(--feud-panel);
-  border: 1px solid var(--feud-line);
+  background: linear-gradient(145deg, #153669, var(--feud-panel));
+  border: 1px solid #4d75af;
+  box-shadow: var(--feud-shadow), inset 0 3px 0 #ffd16c;
   border-radius: 1rem;
 }
 .feud-panel h2 {
@@ -322,7 +378,7 @@
   min-width: 0;
   padding: 0.75rem;
   margin-top: 0.45rem;
-  color: var(--feud-cream);
+  color: var(--feud-white);
   background: var(--feud-bg);
   border: 1px solid var(--feud-line);
   border-radius: 0.4rem;
@@ -359,7 +415,7 @@
 .feud-view-choice input:checked + span {
   border-color: var(--feud-gold);
   color: var(--feud-gold);
-  background: #ecc46d0a;
+  background: #ffd16c12;
 }
 .feud-view-choice input:focus-visible + span {
   outline: 2px solid var(--feud-gold);
@@ -408,7 +464,7 @@
   letter-spacing: 0.12em;
 }
 .feud-game-meta strong {
-  color: var(--feud-cream);
+  color: var(--feud-white);
   font-size: 0.85rem;
   letter-spacing: 0.16em;
   margin-left: 0.4rem;
@@ -426,7 +482,8 @@
   padding: 0.8rem 1.4rem;
   border: 1px solid var(--feud-line);
   border-radius: 0.6rem;
-  background: #ffffff03;
+  background: linear-gradient(120deg, #153772, #0b214a);
+  box-shadow: inset 3px 0 var(--feud-gold);
   min-width: 0;
 }
 .feud-team h2 {
@@ -441,8 +498,11 @@
   font-variant-numeric: tabular-nums;
   color: var(--feud-gold);
 }
+.feud-team.team-1 {
+  box-shadow: inset 3px 0 var(--feud-cyan);
+}
 .feud-team.team-1 strong {
-  color: var(--feud-orange);
+  color: var(--feud-cyan);
 }
 .feud-question {
   max-width: 1000px;
@@ -455,12 +515,12 @@
 }
 .feud-question .feud-eyebrow > span {
   margin: 0 0.5rem;
-  color: #657263;
+  color: #7598ca;
 }
 .feud-question h1 {
   margin: 0.65rem 0 0.8rem;
   font-size: clamp(1.65rem, 3.1vw, 2.9rem);
-  font-weight: 650;
+  font-weight: 800;
   letter-spacing: -0.035em;
   line-height: 1.2;
   text-wrap: balance;
@@ -483,15 +543,23 @@
   display: grid;
   gap: 0.6rem;
 }
+.feud-play:not(.controller-play) .feud-answers {
+  padding: 0.8rem;
+  border: 1px solid #698bc0;
+  border-radius: 0.9rem;
+  background: #04102d;
+  box-shadow: inset 0 0 0 4px #172e57, var(--feud-shadow);
+}
 .feud-answer {
   display: flex;
   align-items: center;
   gap: 1rem;
   min-height: clamp(3.4rem, 7.4vh, 5.1rem);
   padding: 0.5rem 1rem;
-  border: 1px solid #475144;
+  border: 1px solid #5289d7;
   border-radius: 0.6rem;
-  background: linear-gradient(110deg, #22332b, #26372b);
+  background: linear-gradient(110deg, #123b81, #0d2c66);
+  box-shadow: inset 0 1px #ffffff12, 0 3px 0 #020b22;
   overflow: hidden;
 }
 .feud-answer-rank {
@@ -502,9 +570,11 @@
   height: 2rem;
   font-weight: 750;
   font-size: 0.9rem;
-  border: 1px solid #5c6b54;
+  border: 1px solid #82b8ff;
   border-radius: 50%;
-  color: #bac6ae;
+  color: #d2e6ff;
+  background: #061c49;
+  box-shadow: inset 0 2px 5px #020b2266;
 }
 .feud-answer-text {
   flex: 1;
@@ -515,7 +585,7 @@
 }
 .feud-hidden-answer {
   display: block;
-  color: #8e9b7d50;
+  color: #8fbbfa50;
   letter-spacing: 0.22em;
   font-size: 0.8rem;
   text-align: center;
@@ -527,17 +597,30 @@
   font-size: clamp(1.2rem, 2.2vw, 1.9rem);
   font-weight: 800;
 }
+.tv-answer .feud-answer-points {
+  display: grid;
+  align-items: center;
+  align-self: stretch;
+  min-width: 3.4rem;
+  padding-left: 0.8rem;
+  border-left: 1px solid #76a5eb40;
+  color: var(--feud-gold);
+}
+.controller-answer:not(:disabled):hover {
+  border-color: var(--feud-gold);
+  background: #214d94;
+}
 .feud-answer.is-revealed {
-  background: var(--feud-gold);
-  color: #262619;
-  border-color: #f2d390;
+  background: linear-gradient(110deg, #2362b8, #17458f);
+  color: var(--feud-white);
+  border-color: var(--feud-gold);
 }
 .tv-answer.is-revealed {
   animation: feud-reveal 0.35s ease-out;
 }
 .feud-answer.is-revealed .feud-answer-rank {
-  border-color: #9b8044;
-  color: #655023;
+  border-color: var(--feud-gold);
+  color: var(--feud-gold);
 }
 .feud-bank {
   display: flex;
@@ -546,9 +629,10 @@
   justify-content: center;
   padding: 1.2rem;
   text-align: center;
-  background: #ffffff03;
-  border: 1px solid var(--feud-line);
+  background: linear-gradient(160deg, #123068, #071735);
+  border: 1px solid #6381b0;
   border-radius: 0.8rem;
+  box-shadow: inset 0 3px var(--feud-gold), var(--feud-shadow);
 }
 .feud-bank > strong {
   font-size: clamp(4rem, 7vw, 6rem);
@@ -556,6 +640,7 @@
   letter-spacing: -0.06em;
   color: var(--feud-gold);
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 1.5rem #ffbe4333;
 }
 .feud-bank > p:last-child {
   color: var(--feud-muted);
@@ -574,17 +659,17 @@
   place-items: center;
   width: 2.7rem;
   height: 2.7rem;
-  border: 1px solid #4c4b3c;
+  border: 1px solid #45618c;
   border-radius: 0.4rem;
-  color: #4c4b3c;
+  color: #7191bf;
   font-size: 2.3rem;
   line-height: 1;
   font-weight: 700;
 }
 .feud-strikes > .is-strike {
-  color: #ff9c84;
-  border-color: #a05243;
-  background: #8b3a292b;
+  color: #ffb2a7;
+  border-color: #e97169;
+  background: #802c424d;
   animation: feud-reveal 0.2s;
 }
 .feud-host-controls {
@@ -596,6 +681,7 @@
   padding: 1rem;
   border: 1px solid var(--feud-line);
   border-radius: 0.7rem;
+  background: #0c245380;
 }
 .feud-award-hint {
   margin: 0.25rem 0 0;
@@ -666,10 +752,10 @@
   left: 1rem;
   max-width: 850px;
   margin: 0 auto;
-  background: #30291f;
+  background: #142950;
 }
 .feud-dialog::backdrop {
-  background: #070e0bd9;
+  background: #02091ee6;
   backdrop-filter: blur(8px);
 }
 .feud-dialog {
@@ -682,10 +768,11 @@
   overflow-y: auto;
   margin: auto;
   padding: 2rem;
-  color: var(--feud-cream);
-  border: 1px solid #536044;
+  color: var(--feud-white);
+  border: 1px solid #5d82ba;
   border-radius: 1rem;
-  background: var(--feud-panel);
+  background: linear-gradient(145deg, #153669, var(--feud-panel));
+  box-shadow: inset 0 3px var(--feud-gold), var(--feud-shadow);
   text-align: center;
 }
 .feud-dialog[open] {
@@ -716,6 +803,10 @@
   font-weight: 750;
   color: var(--feud-gold);
   padding: 1rem 0;
+  border: 1px solid var(--feud-line);
+  border-radius: 0.5rem;
+  background: var(--feud-bg);
+  font-variant-numeric: tabular-nums;
 }
 .feud-finale {
   display: flex;
@@ -883,7 +974,17 @@
     padding: 1.5rem;
   }
   .mode-card h2 {
-    margin-top: 2rem;
+    margin-top: 3.5rem;
+  }
+  .mode-feud-logo {
+    top: 2.2rem;
+    right: 1.5rem;
+  }
+  .mode-feud-logo .feud-logo {
+    width: 7rem;
+  }
+  .mode-feud-logo .feud-logo > span {
+    font-size: 1rem;
   }
   .mode-footer {
     margin-top: 1.8rem;
@@ -912,6 +1013,13 @@
     grid-template-columns: 1fr;
     margin: 2rem auto;
     max-width: 29rem;
+  }
+  .feud-lobby-intro > .feud-logo {
+    width: 10rem;
+    margin-bottom: 1.8rem;
+  }
+  .feud-lobby-intro > .feud-logo > span {
+    font-size: 1.5rem;
   }
   .feud-lobby h1 {
     font-size: clamp(2.8rem, 11vw, 4rem);

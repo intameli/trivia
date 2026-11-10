@@ -14,6 +14,7 @@ import {
   subscribeRoom,
 } from "./firebase.js";
 import { questions, rounds } from "./questions.js";
+import FeudLogo from "./FeudLogo.jsx";
 
 function readKey(code) {
   try {
@@ -197,7 +198,6 @@ export default function Feud() {
         gameUrl(room.code, "controller", room.key),
       );
       setRoute({ ...room, view: "controller" });
-      setPairing(true);
     } catch (failure) {
       setError(friendlyError(failure));
     } finally {
@@ -573,6 +573,8 @@ function Lobby({ start, connect, pending, error }) {
   return (
     <main className="feud-lobby">
       <div className="feud-lobby-intro">
+        <FeudLogo />
+        <p className="feud-eyebrow">Your living room. Centre stage.</p>
         <h1>
           Guess the
           <br />
@@ -594,7 +596,7 @@ function Lobby({ start, connect, pending, error }) {
       <div className="feud-setup">
         <div className="feud-panel">
           <fieldset disabled={pending}>
-            <legend>This screen</legend>
+            <legend>Choose this screen’s role</legend>
             <div className="feud-view-choice">
               <label>
                 <input
@@ -701,6 +703,7 @@ function Scoreboard({ game }) {
       {game.teams.map((team, index) => (
         <div className={`feud-team team-${index}`} key={index}>
           <div>
+            <p className="feud-eyebrow">Team {index + 1}</p>
             <h2>{team.name}</h2>
           </div>
           <strong aria-label={`${team.name}: ${team.score} points`}>
