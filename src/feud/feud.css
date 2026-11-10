@@ -330,7 +330,7 @@
 }
 .feud-panel fieldset {
   padding: 0;
-  margin: 1.3rem 0 1.5rem;
+  margin: 0 0 1.5rem;
   border: 0;
 }
 .feud-view-choice {
@@ -365,35 +365,27 @@
   outline: 2px solid var(--feud-gold);
   outline-offset: 3px;
 }
-.feud-panel > .primary {
+.feud-panel form > .primary {
   width: 100%;
+  margin-top: 1.3rem;
+}
+.feud-panel form h2 {
+  margin-bottom: 0.5rem;
+}
+.feud-setup-hint {
+  margin: 0 0 1.5rem;
+  color: var(--feud-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
 }
 .feud-small {
   font-size: 0.72rem;
   line-height: 1.7;
   color: var(--feud-muted);
 }
-.feud-panel > .feud-small {
+.feud-panel form > .feud-small {
   margin: 0.8rem 0 0;
   text-align: center;
-}
-.join-panel {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.7rem;
-  align-items: end;
-}
-.join-panel > div {
-  grid-column: 1 / -1;
-}
-.join-panel h2 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-.join-panel p {
-  margin: 0.4rem 0 0.7rem;
-  color: var(--feud-muted);
-  font-size: 0.75rem;
 }
 .feud-code-field input {
   letter-spacing: 0.2em;
@@ -707,16 +699,6 @@
   right: 0.5rem;
   top: 0.35rem;
   font-size: 1.4rem;
-}
-.feud-qr {
-  padding: 0.65rem;
-  margin: 0.3rem auto;
-  background: white;
-  border-radius: 0.7rem;
-}
-.feud-shell input.feud-link {
-  font-size: 0.65rem;
-  margin: 0;
 }
 .feud-room-code {
   font-size: 2.8rem;

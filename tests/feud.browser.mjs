@@ -11,6 +11,8 @@ async function screens(browser, teamNames) {
   let failWrite = false;
   const clients = [];
   const errors = [];
+  const connections = [];
+  const creations = [];
 
   async function deliver(client, next = game, connected = true) {
     if (
@@ -25,6 +27,8 @@ async function screens(browser, teamNames) {
   }
 
   const server = {
+    connections,
+    creations,
     get game() {
       return game;
     },
@@ -63,6 +67,14 @@ async function screens(browser, teamNames) {
       };
       clients.push(client);
       page.on("pageerror", (error) => errors.push(error.message));
+      await page.exposeFunction("__feudCreate", (names) => {
+        creations.push(names);
+        game = createGame(names);
+        return { code: "ABC234", key: "test" };
+      });
+      await page.exposeFunction("__feudJoin", (code, options) => {
+        connections.push({ code, ...options });
+      });
       await page.exposeFunction("__feudSubscribe", () => {
         client.subscriptions += 1;
         client.listening = true;
@@ -89,8 +101,8 @@ async function screens(browser, teamNames) {
           body: `
           export const normalizeCode = code => code.trim().toUpperCase().replace(/[\\s-]/g, '');
           export const friendlyError = error => error.message;
-          export async function createRoom() { return { code: 'ABC234', key: 'test' }; }
-          export async function joinRoom() {}
+          export const createRoom = names => window.__feudCreate(names);
+          export const joinRoom = (code, options) => window.__feudJoin(code, options);
           export async function subscribeRoom(code, onChange, onError) {
             window.__feudReceive = onChange;
             window.__feudError = onError;
@@ -371,28 +383,69 @@ test("all questions fit phone and TV widths; full TV boards fit a 720p screen", 
   }
 });
 
-test("compact lobby and both pairing dialogs remain usable on a phone", async ({
+test("phone creates the game and the default display joins by code", async ({
   browser,
 }) => {
   const server = await screens(browser);
   try {
-    const { page } = await server.open(null, phoneSize);
-    await page.getByRole("radio", { name: "▯ Phone", exact: true }).check();
-    await page.getByRole("button", { name: "Start →", exact: true }).click();
-    await expect(page.locator(".controller-answer")).toHaveCount(5);
-    await page.getByRole("button", { name: "Connect TV", exact: true }).click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.locator(".feud-room-code")).toHaveText("ABC234");
-    await page.getByRole("button", { name: "Close dialog" }).click();
-    const { page: tv } = await server.open("board", tvSize);
-    await tv
-      .getByRole("button", { name: "Connect phone", exact: true })
+    const { page: phone } = await server.open(null, phoneSize);
+    await expect(phone.getByRole("radio")).toHaveCount(2);
+    await expect(
+      phone.getByRole("radio", { name: "Display", exact: true }),
+    ).toBeChecked();
+    await expect(phone.getByRole("textbox", { name: "Room code" })).toBeVisible();
+    await expect(
+      phone.getByRole("button", { name: "Create game →" }),
+    ).toHaveCount(0);
+    await phone.getByRole("radio", { name: "Controller", exact: true }).check();
+    await expect(phone.getByRole("textbox", { name: "Room code" })).toHaveCount(0);
+    await phone
+      .getByRole("textbox", { name: "Team 1", exact: true })
+      .fill("Team Mango");
+    await phone
+      .getByRole("button", { name: "Create game →", exact: true })
       .click();
-    await expect(tv.locator(".feud-qr svg")).toBeVisible();
+    await expect(
+      phone.getByRole("dialog", { name: "Connect TV" }),
+    ).toBeVisible();
+    await expect(phone.locator(".feud-room-code")).toHaveText("ABC234");
+    await expect(phone).toHaveURL(/view=controller#key=test$/);
+    expect(server.creations).toEqual([["Team Mango", "Team Samosa"]]);
+    await phone
+      .getByRole("button", { name: "Ready to host", exact: true })
+      .click();
+    await expect(phone.locator(".controller-answer")).toHaveCount(5);
+    await phone.getByRole("button", { name: "Connect TV", exact: true }).click();
+    await expect(phone.locator(".feud-room-code")).toHaveText("ABC234");
+    await phone.getByRole("button", { name: "Close dialog" }).click();
+
+    const { page: tv } = await server.open(null, tvSize);
+    await expect(
+      tv.getByRole("radio", { name: "Display", exact: true }),
+    ).toBeChecked();
+    await tv.getByRole("textbox", { name: "Room code" }).fill("abc234");
+    await tv.getByRole("button", { name: "Join display →", exact: true }).click();
+    await expect(tv.locator(".feud-connection")).toHaveText("Live");
+    await expect(tv).toHaveURL(/room=ABC234&view=board$/);
+    await expect(
+      tv.getByRole("button", { name: "Connect phone", exact: true }),
+    ).toHaveCount(0);
     await expect(
       tv.getByRole("link", { name: "Host here", exact: true }),
-    ).toHaveAttribute("href", /view=controller/);
-    await tv.getByRole("button", { name: "Close dialog" }).click();
+    ).toHaveCount(0);
+    await expect(tv.locator(".controller-answer")).toHaveCount(0);
+    expect(server.creations).toHaveLength(1);
+    expect(server.connections).toContainEqual({
+      code: "ABC234",
+      controller: false,
+      key: "",
+    });
+    await phone.locator(".controller-answer").nth(0).click();
+    await expect(tv.locator(".feud-answer.is-revealed")).toHaveCount(1);
+    await expect(tv.locator(".feud-team h2").nth(0)).toHaveText("Team Mango");
+    await phone.reload();
+    await expect(phone.locator(".feud-connection")).toHaveText("Live");
+    await expect(phone.locator(".controller-answer.is-revealed")).toHaveCount(1);
   } finally {
     await server.close();
   }

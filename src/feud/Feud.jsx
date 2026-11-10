@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import {
   applyAction,
   boardPoints,
@@ -159,7 +158,7 @@ export default function Feud() {
     };
   }, [route.code, route.key, route.view, retry]);
 
-  async function start(teamNames, view) {
+  async function start(teamNames) {
     setPending(true);
     setError("");
     try {
@@ -169,9 +168,13 @@ export default function Feud() {
       } catch {
         /* The URL still supports refresh without storage. */
       }
-      window.history.replaceState(null, "", gameUrl(room.code, view, room.key));
-      setRoute({ ...room, view });
-      setPairing(view === "board");
+      window.history.replaceState(
+        null,
+        "",
+        gameUrl(room.code, "controller", room.key),
+      );
+      setRoute({ ...room, view: "controller" });
+      setPairing(true);
     } catch (failure) {
       setError(friendlyError(failure));
     } finally {
@@ -185,7 +188,7 @@ export default function Feud() {
     setGame(null);
     setRevealing(null);
     setConfirmNext(null);
-    setRoute({ code: normalized, view: "board", key: readKey(normalized) });
+    setRoute({ code: normalized, view: "board", key: "" });
   }
 
   async function act(action) {
@@ -249,7 +252,6 @@ export default function Feud() {
   const isController = route.view === "controller";
   const connected = online && synced;
   const locked = pending || !connected;
-  const controllerUrl = gameUrl(route.code, "controller", route.key);
   const boardUrl = gameUrl(route.code, "board");
 
   return (
@@ -267,7 +269,7 @@ export default function Feud() {
               {connected ? "Live" : online ? "Connecting…" : "Offline"}
             </span>
           ) : null}
-          {game ? (
+          {isController && game ? (
             <button
               className="feud-button subtle"
               onClick={() => {
@@ -275,7 +277,7 @@ export default function Feud() {
                 setCopied("");
               }}
             >
-              Connect {isController ? "TV" : "phone"}
+              Connect TV
             </button>
           ) : null}
           {!isController && game ? (
@@ -493,72 +495,23 @@ export default function Feud() {
         </main>
       )}
 
-      {pairing && game ? (
-        <Dialog
-          title={isController ? "Connect TV" : "Connect phone"}
-          close={() => setPairing(false)}
-        >
-          {isController ? (
-            <>
-              <p>Enter this code on your TV.</p>
-              <div className="feud-room-code">{route.code}</div>
-              <a
-                className="feud-button primary"
-                href={boardUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open TV ↗
-              </a>
-              <button
-                className="feud-button"
-                onClick={() => copyLink(boardUrl, "TV link")}
-              >
-                Copy TV link
-              </button>
-              <input
-                className="feud-link"
-                aria-label="TV board link"
-                readOnly
-                value={boardUrl}
-                onFocus={(event) => event.target.select()}
-              />
-            </>
-          ) : route.key ? (
-            <>
-              <p>Scan to host from your phone.</p>
-              <div className="feud-qr">
-                <QRCodeSVG
-                  value={controllerUrl}
-                  size={176}
-                  marginSize={2}
-                  level="M"
-                />
-              </div>
-              <a className="feud-button primary" href={controllerUrl}>
-                Host here
-              </a>
-              <button
-                className="feud-button"
-                onClick={() => copyLink(controllerUrl, "Host link")}
-              >
-                Copy host link
-              </button>
-              <input
-                className="feud-link"
-                aria-label="Private controller link"
-                readOnly
-                value={controllerUrl}
-                onFocus={(event) => event.target.select()}
-              />
-              <p className="feud-small">Host only · grants control.</p>
-            </>
-          ) : (
-            <>
-              <p>Use the host’s phone to control this board.</p>
-              <div className="feud-room-code">{route.code}</div>
-            </>
-          )}
+      {pairing && isController && game ? (
+        <Dialog title="Connect TV" close={() => setPairing(false)}>
+          <p>On your TV, open Desi Feud and select Display. Enter this code:</p>
+          <div className="feud-room-code">{route.code}</div>
+          <p className="feud-small">Keep this phone open to host the game.</p>
+          <button
+            className="feud-button primary"
+            onClick={() => setPairing(false)}
+          >
+            Ready to host
+          </button>
+          <button
+            className="feud-button"
+            onClick={() => copyLink(boardUrl, "TV link")}
+          >
+            Copy TV link
+          </button>
           {copied ? (
             <p role="status" className="feud-small">
               {copied}
@@ -600,7 +553,7 @@ function Lobby({ start, connect, pending, error }) {
           <br />
           <em>top answers.</em>
         </h1>
-        <p>Guess aloud. Reveal from your phone.</p>
+        <p>Host on your phone. Play together on the TV.</p>
         <div className="feud-facts">
           <span>
             <strong>30</strong> questions
@@ -614,34 +567,8 @@ function Lobby({ start, connect, pending, error }) {
         </div>
       </div>
       <div className="feud-setup">
-        <form
-          className="feud-panel"
-          onSubmit={(event) => {
-            event.preventDefault();
-            start(names, view);
-          }}
-        >
-          <h2>New game</h2>
-          <div className="feud-team-fields">
-            {names.map((name, index) => (
-              <label key={index}>
-                Team {index + 1}
-                <input
-                  maxLength={30}
-                  required
-                  value={name}
-                  onChange={(event) =>
-                    setNames(
-                      names.map((old, item) =>
-                        item === index ? event.target.value : old,
-                      ),
-                    )
-                  }
-                />
-              </label>
-            ))}
-          </div>
-          <fieldset>
+        <div className="feud-panel">
+          <fieldset disabled={pending}>
             <legend>This screen</legend>
             <div className="feud-view-choice">
               <label>
@@ -652,7 +579,7 @@ function Lobby({ start, connect, pending, error }) {
                   checked={view === "board"}
                   onChange={() => setView("board")}
                 />
-                <span>▣ TV</span>
+                <span>Display</span>
               </label>
               <label>
                 <input
@@ -662,44 +589,77 @@ function Lobby({ start, connect, pending, error }) {
                   checked={view === "controller"}
                   onChange={() => setView("controller")}
                 />
-                <span>▯ Phone</span>
+                <span>Controller</span>
               </label>
             </div>
           </fieldset>
-          <button className="feud-button primary" disabled={pending}>
-            {pending ? "Starting…" : "Start →"}
-          </button>
-          <p className="feud-small">Saved for 7 days · suggested points.</p>
-        </form>
-        <form
-          className="feud-panel join-panel"
-          onSubmit={(event) => {
-            event.preventDefault();
-            connect(code);
-          }}
-        >
-          <div>
-            <h2>Join on TV</h2>
-          </div>
-          <label className="feud-code-field">
-            Room code
-            <input
-              aria-label="Room code"
-              placeholder="ABC234"
-              value={code}
-              maxLength={6}
-              autoCapitalize="characters"
-              autoComplete="off"
-              spellCheck={false}
-              pattern="[A-HJ-NP-Za-hj-np-z2-9]{6}"
-              required
-              onChange={(event) => setCode(normalizeCode(event.target.value))}
-            />
-          </label>
-          <button className="feud-button" disabled={pending}>
-            Join ↗
-          </button>
-        </form>
+          {view === "board" ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                connect(code);
+              }}
+            >
+              <h2>Join the display</h2>
+              <p className="feud-setup-hint">
+                Start a game on your phone as Controller, then enter its code here.
+              </p>
+              <label className="feud-code-field">
+                Room code
+                <input
+                  aria-label="Room code"
+                  placeholder="ABC234"
+                  value={code}
+                  maxLength={6}
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
+                  pattern="[A-HJ-NP-Za-hj-np-z2-9]{6}"
+                  required
+                  onChange={(event) => setCode(normalizeCode(event.target.value))}
+                />
+              </label>
+              <button className="feud-button primary" disabled={pending}>
+                Join display →
+              </button>
+            </form>
+          ) : (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                start(names);
+              }}
+            >
+              <h2>Host from your phone</h2>
+              <p className="feud-setup-hint">
+                Create a game, then use the code to connect your TV.
+              </p>
+              <div className="feud-team-fields">
+                {names.map((name, index) => (
+                  <label key={index}>
+                    Team {index + 1}
+                    <input
+                      maxLength={30}
+                      required
+                      value={name}
+                      onChange={(event) =>
+                        setNames(
+                          names.map((old, item) =>
+                            item === index ? event.target.value : old,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+              <button className="feud-button primary" disabled={pending}>
+                {pending ? "Creating…" : "Create game →"}
+              </button>
+              <p className="feud-small">Saved for 7 days · suggested points.</p>
+            </form>
+          )}
+        </div>
         {error ? (
           <p role="alert" className="feud-error">
             {error}

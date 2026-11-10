@@ -4,12 +4,12 @@ React/Vite party games. The home screen offers the original Trivia game and a se
 
 ## Play Desi Feud
 
-1. Open the site on your TV or laptop, select **Desi Feud**, enter two team names, and start with **TV** selected.
-2. Scan the QR code with your phone, or copy the private controller link to your phone. The phone shows the answer grid; tapping an answer reveals it on the TV immediately.
+1. Open **Desi Feud** on your phone, select **Controller**, enter two team names, and choose **Create game**. The phone shows a six-character room code.
+2. Open **Desi Feud** on your TV or laptop. **Display** is selected by default; enter the phone’s code and choose **Join display**. Keep the phone open as the host: tapping an answer reveals it on the TV immediately.
 3. Add or undo strikes, reveal answers, and award the earned bank to a team. Awarding reveals every remaining answer on both devices without adding their points to the bank. **Undo award** restores the original reveals and lets the host correct the winner.
 4. Use **Next**, **Prev**, or the question selector to move around the five rounds. Reveals, strikes, awards, and scores survive navigation and refresh. Finish after question 30 to show the winner.
 
-You can also start with **Phone** selected, then enter its six-character room code on the TV. Room codes open a read-only board. The private host link grants control; keep it with the host. **Connect phone / Connect TV** reopens pairing instructions.
+The phone always creates and controls the game. **Connect TV** on the phone reopens the room code and offers a display link. Room codes and display links open a read-only board. The phone’s own URL preserves host access on refresh; keep it with the host.
 
 The original Trivia game remains available at `?mode=trivia`, including saved local games and CSV imports. Its gameplay and existing `triviaGames` storage are unchanged.
 

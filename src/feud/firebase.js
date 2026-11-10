@@ -95,7 +95,8 @@ export async function joinRoom(code, { controller = false, key = "" } = {}) {
     // after the first claim rather than attempting a forbidden member update.
     await runTransaction(db, async (transaction) => {
       if ((await transaction.get(memberRef)).exists()) return;
-      if (!key) throw new Error("Scan the host’s QR or use their host link.");
+      if (!key)
+        throw new Error("Open the game on the host’s phone, or create a new game.");
       transaction.set(memberRef, { key });
     });
   }
