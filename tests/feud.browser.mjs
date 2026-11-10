@@ -5,7 +5,7 @@ import { questions } from "../src/feud/questions.js";
 // Exercise the real React screens against one shared, controllable transport.
 // Firebase's actual pairing, transactions, and listeners are checked separately
 // by firebase.integration.mjs. Here we can also reproduce stalled/failed writes.
-async function screens(browser, teamNames) {
+async function screens(browser, teamNames, snapshotTransform = (value) => value) {
   let game = createGame(teamNames);
   let heldWrite;
   let failWrite = false;
@@ -14,15 +14,16 @@ async function screens(browser, teamNames) {
   const connections = [];
   const creations = [];
 
-  async function deliver(client, next = game, connected = true) {
+  async function deliver(client, next = game, connected = true, confirmed = true) {
     if (
       client.listening &&
       !client.paused &&
       (await client.page.evaluate(() => navigator.onLine))
     )
       await client.page.evaluate(
-        ({ next, connected }) => window.__feudReceive?.(next, connected),
-        { next, connected },
+        ({ next, connected, confirmed }) =>
+          window.__feudReceive?.(next, connected, confirmed),
+        { next: snapshotTransform(next), connected, confirmed },
       );
   }
 
@@ -43,8 +44,8 @@ async function screens(browser, teamNames) {
       game = applyAction(game, action);
       await Promise.all(clients.map((client) => deliver(client)));
     },
-    async snapshot(client, next, connected) {
-      await deliver(client, next, connected);
+    async snapshot(client, next, connected, confirmed = true) {
+      await deliver(client, next, connected, confirmed);
     },
     async disconnect(client) {
       client.listening = false;
@@ -78,7 +79,7 @@ async function screens(browser, teamNames) {
       await page.exposeFunction("__feudSubscribe", () => {
         client.subscriptions += 1;
         client.listening = true;
-        return game;
+        return snapshotTransform(game);
       });
       await page.exposeFunction("__feudUnsubscribe", () => {
         client.listening = false;
@@ -130,6 +131,78 @@ async function screens(browser, teamNames) {
 
 const phoneSize = { width: 390, height: 844 };
 const tvSize = { width: 1280, height: 720 };
+
+test("phone writes and focus events keep the live controls and scroll position stable", async ({
+  browser,
+}) => {
+  // Map order is not guaranteed by Firestore; it can differ from sendAction's
+  // transaction result even when both contain the same confirmed game.
+  function reorderMaps(value) {
+    if (Array.isArray(value)) return value.map(reorderMaps);
+    if (value && typeof value === "object")
+      return Object.fromEntries(
+        Object.entries(value)
+          .reverse()
+          .map(([key, child]) => [key, reorderMaps(child)]),
+      );
+    return value;
+  }
+  const server = await screens(browser, undefined, reorderMaps);
+  try {
+    const client = await server.open("controller", phoneSize);
+    const { page: phone } = client;
+    await phone.clock.install();
+    const subscriptions = client.subscriptions;
+    const before = await phone.evaluate(() => {
+      window.scrollTo(0, 300);
+      window.__connectionChanges = [];
+      new MutationObserver((changes) => {
+        for (const change of changes)
+          for (const node of change.addedNodes)
+            if (node.matches?.(".feud-offline"))
+              window.__connectionChanges.push(node.textContent);
+      }).observe(document.querySelector(".feud-play"), { childList: true });
+      return {
+        scroll: window.scrollY,
+        board: document.querySelector(".controller-grid").getBoundingClientRect().top,
+      };
+    });
+    // A pending write has not been acknowledged, but the connection is live.
+    await server.snapshot(client, server.game, true, false);
+    await phone.evaluate(() => {
+      for (let count = 0; count < 3; count += 1) {
+        window.dispatchEvent(new Event("focus"));
+        window.dispatchEvent(new PageTransitionEvent("pageshow"));
+      }
+    });
+    await phone.locator(".controller-answer").nth(0).click();
+    await expect(phone.locator(".controller-answer.is-revealed")).toHaveCount(1);
+    await expect(phone.locator(".feud-bank > strong")).toHaveText("30");
+    await phone.clock.runFor(2000);
+    expect(client.subscriptions).toBe(subscriptions);
+    await expect(phone.locator(".feud-connection")).toHaveText("Live");
+    await expect(phone.locator(".feud-offline")).toHaveCount(0);
+    const after = await phone.evaluate(() => ({
+      scroll: window.scrollY,
+      board: document.querySelector(".controller-grid").getBoundingClientRect().top,
+      changes: window.__connectionChanges,
+    }));
+    expect(after.scroll).toBe(before.scroll);
+    expect(after.board).toBe(before.board);
+    expect(after.changes).toEqual([]);
+
+    // Losing the server connection still pauses controls without moving them.
+    await server.snapshot(client, server.game, false);
+    await expect(phone.locator(".feud-offline")).toBeVisible();
+    await expect(phone.locator(".controller-answer").nth(1)).toBeDisabled();
+    expect(await phone.evaluate(() => window.scrollY)).toBe(before.scroll);
+    expect(await phone.locator(".controller-grid").evaluate((board) =>
+      board.getBoundingClientRect().top,
+    )).toBe(before.board);
+  } finally {
+    await server.close();
+  }
+});
 
 test("phone highlights immediately, confirms on TV, and rolls back failed taps", async ({
   browser,

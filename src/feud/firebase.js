@@ -114,7 +114,8 @@ export async function subscribeRoom(code, onChange, onError) {
         const room = assertRoom(snapshot);
         onChange(
           room.game,
-          !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites,
+          !snapshot.metadata.fromCache,
+          !snapshot.metadata.hasPendingWrites,
         );
       } catch (error) {
         onError(error);

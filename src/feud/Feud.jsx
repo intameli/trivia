@@ -39,6 +39,18 @@ function gameUrl(code, view, key = "") {
   return url.href;
 }
 
+// Firestore can return map fields in a different order than the transaction.
+// Compare their contents so an acknowledged write doesn't restart the listener.
+function snapshotKey(game) {
+  return JSON.stringify(game, (_key, value) =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? Object.fromEntries(
+          Object.entries(value).sort(([a], [b]) => a.localeCompare(b)),
+        )
+      : value,
+  );
+}
+
 export default function Feud() {
   const [route, setRoute] = useState(initialRoute);
   const [serverGame, setGame] = useState(null);
@@ -55,6 +67,7 @@ export default function Feud() {
   const syncTimer = useRef(null);
   const latestSnapshot = useRef("");
   const expectedSnapshot = useRef("");
+  const listenerHealthy = useRef(false);
 
   const game =
     revealing && revealing.questionIndex === serverGame?.questionIndex
@@ -75,7 +88,9 @@ export default function Feud() {
   }, []);
 
   useEffect(() => {
-    const reconnect = () => {
+    const reconnect = (event) => {
+      if (event.type === "focus" && listenerHealthy.current) return;
+      if (event.type === "pageshow" && !event.persisted) return;
       if (navigator.onLine && document.visibilityState === "visible")
         setRetry((value) => value + 1);
     };
@@ -96,7 +111,6 @@ export default function Feud() {
     if (!route.code) return undefined;
     let cancelled = false;
     let unsubscribe;
-    setSynced(false);
     setError("");
     (async () => {
       await joinRoom(route.code, {
@@ -106,19 +120,23 @@ export default function Feud() {
       if (cancelled) return;
       unsubscribe = await subscribeRoom(
         route.code,
-        (nextGame, connected) => {
+        (nextGame, connected, confirmed = true) => {
           if (!cancelled) {
+            listenerHealthy.current = connected;
             // Cached snapshots can trail a committed action after reconnecting.
             // Keep the last board until the server catches up.
             if (!connected) {
               setSynced(false);
               return;
             }
-            latestSnapshot.current = JSON.stringify(nextGame);
+            // Pending local writes still have a live connection. Keep controls
+            // and layout steady while waiting for their server confirmation.
+            setSynced(true);
+            if (!confirmed) return;
+            latestSnapshot.current = snapshotKey(nextGame);
             if (latestSnapshot.current === expectedSnapshot.current)
               clearTimeout(syncTimer.current);
             setGame(nextGame);
-            setSynced(connected);
             setError("");
             setRevealing((previous) => {
               if (
@@ -145,12 +163,17 @@ export default function Feud() {
           if (!cancelled) {
             setError(friendlyError(failure));
             setSynced(false);
+            listenerHealthy.current = false;
           }
         },
       );
       if (cancelled) unsubscribe();
     })().catch((failure) => {
-      if (!cancelled) setError(friendlyError(failure));
+      if (!cancelled) {
+        setError(friendlyError(failure));
+        setSynced(false);
+        listenerHealthy.current = false;
+      }
     });
     return () => {
       cancelled = true;
@@ -186,6 +209,8 @@ export default function Feud() {
     const normalized = normalizeCode(code);
     window.history.replaceState(null, "", gameUrl(normalized, "board"));
     setGame(null);
+    setSynced(false);
+    listenerHealthy.current = false;
     setRevealing(null);
     setConfirmNext(null);
     setRoute({ code: normalized, view: "board", key: "" });
@@ -215,7 +240,7 @@ export default function Feud() {
       });
       // A completed transaction must also reach the live listener. Restart a
       // stalled listener instead of requiring a manual page refresh.
-      expectedSnapshot.current = JSON.stringify(committedGame);
+      expectedSnapshot.current = snapshotKey(committedGame);
       clearTimeout(syncTimer.current);
       if (latestSnapshot.current !== expectedSnapshot.current) {
         syncTimer.current = setTimeout(

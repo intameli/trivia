@@ -658,6 +658,16 @@
   background: none;
   padding: 0.2rem 0.6rem;
 }
+.controller-play > .feud-offline {
+  position: fixed;
+  z-index: 10;
+  right: 1rem;
+  bottom: 1rem;
+  left: 1rem;
+  max-width: 850px;
+  margin: 0 auto;
+  background: #30291f;
+}
 .feud-dialog::backdrop {
   background: #070e0bd9;
   backdrop-filter: blur(8px);
