@@ -59,6 +59,17 @@ async function screens(browser, teamNames, snapshotTransform = (value) => value)
         baseURL: "http://127.0.0.1:4174",
       });
       const page = await context.newPage();
+      await page.addInitScript(() => {
+        window.__feudSounds = [];
+        const start = OscillatorNode.prototype.start;
+        OscillatorNode.prototype.start = function (...args) {
+          window.__feudSounds.push({
+            tone: this.type,
+            state: this.context.state,
+          });
+          return start.apply(this, args);
+        };
+      });
       const client = {
         context,
         page,
@@ -131,6 +142,64 @@ async function screens(browser, teamNames, snapshotTransform = (value) => value)
 
 const phoneSize = { width: 390, height: 844 };
 const tvSize = { width: 1280, height: 720 };
+
+test("confirmed answers ding and strikes buzz on enabled devices without replaying old actions", async ({
+  browser,
+}) => {
+  const server = await screens(browser);
+  try {
+    const { page: phone } = await server.open("controller", phoneSize);
+    const tvClient = await server.open("board", tvSize);
+    const { page: tv } = tvClient;
+    const sounds = (page) => page.evaluate(() => window.__feudSounds);
+    const tones = async (page) => (await sounds(page)).map(({ tone }) => tone);
+    await tv.getByRole("button", { name: "Enable sound", exact: true }).click();
+    await expect(tv.getByRole("button", { name: "Sound on", exact: true })).toBeVisible();
+
+    const release = server.holdWrite();
+    await phone.locator(".controller-answer").nth(0).click();
+    expect(await sounds(phone)).toEqual([]);
+    expect(await sounds(tv)).toEqual([]);
+    release();
+    await expect.poll(() => tones(phone)).toEqual(["sine"]);
+    await expect.poll(() => tones(tv)).toEqual(["sine"]);
+    expect((await sounds(tv))[0].state).toBe("running");
+
+    server.failWrite();
+    await phone.locator(".controller-answer").nth(1).click();
+    await expect(phone.getByRole("alert")).toContainText("Couldn’t save");
+    await server.snapshot(tvClient, server.game, true);
+    expect(await tones(phone)).toEqual(["sine"]);
+    expect(await tones(tv)).toEqual(["sine"]);
+
+    await phone.getByRole("button", { name: "× Strike", exact: true }).click();
+    await expect.poll(() => tones(tv)).toEqual(["sine", "sawtooth"]);
+    await expect.poll(() => tones(phone)).toEqual(["sine", "sawtooth"]);
+    await phone.getByRole("button", { name: "Undo strike", exact: true }).click();
+    await phone.locator(".feud-award-controls").getByRole("button", { name: "Team Chai", exact: true }).click();
+    await phone.getByRole("button", { name: "Undo award", exact: true }).click();
+    expect(await tones(tv)).toEqual(["sine", "sawtooth"]);
+
+    await tv.getByRole("button", { name: "Sound on", exact: true }).click();
+    await phone.locator(".controller-answer").nth(1).click();
+    await expect.poll(() => tones(phone)).toEqual(["sine", "sawtooth", "sine"]);
+    expect(await tones(tv)).toEqual(["sine", "sawtooth"]);
+    await tv.getByRole("button", { name: "Sound off", exact: true }).click();
+    expect(await tones(tv)).toEqual(["sine", "sawtooth"]);
+
+    await server.act({ type: "question", index: 1 });
+    await server.act({ type: "question", index: 0 });
+    expect(await tones(tv)).toEqual(["sine", "sawtooth"]);
+    await tv.reload();
+    await expect(tv.locator(".tv-answer.is-revealed")).toHaveCount(2);
+    await tv.getByRole("button", { name: "Enable sound", exact: true }).click();
+    expect(await sounds(tv)).toEqual([]);
+    await server.act({ type: "strike" });
+    await expect.poll(() => tones(tv)).toEqual(["sawtooth"]);
+  } finally {
+    await server.close();
+  }
+});
 
 test("phone writes and focus events keep the live controls and scroll position stable", async ({
   browser,

@@ -11,6 +11,8 @@ React/Vite party games. The home screen offers the original Trivia game and a se
 
 The phone always creates and controls the game. **Connect TV** on the phone reopens the room code and offers a display link. Room codes and display links open a read-only board. The phone’s own URL preserves host access on refresh; keep it with the host.
 
+Confirmed answer reveals play a ding and added strikes play a buzzer on each device. Sound unlocks after a local click or keypress; on a TV opened directly from a link, choose **Enable sound** first. **Sound on** mutes that device. Reloading, navigating questions, undoing strikes, and awarding the bank do not play sounds.
+
 The original Trivia game remains available at `?mode=trivia`, including saved local games and CSV imports. Its gameplay and existing `triviaGames` storage are unchanged.
 
 Trivia CSVs use category, question, answer, and player name columns, with an optional header row. Quoted commas, quotation marks, multiline cells, and extra player-only rows are supported. Invalid imports show an error without adding a game. If browser storage is blocked or full, games remain playable for the current page session and a warning explains that changes cannot be saved. Selecting a game starts a fresh scorecard.

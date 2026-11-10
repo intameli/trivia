@@ -15,6 +15,7 @@ import {
 } from "./firebase.js";
 import { questions, rounds } from "./questions.js";
 import FeudLogo from "./FeudLogo.jsx";
+import useFeudSounds from "./useFeudSounds.js";
 
 function readKey(code) {
   try {
@@ -69,6 +70,7 @@ export default function Feud() {
   const latestSnapshot = useRef("");
   const expectedSnapshot = useRef("");
   const listenerHealthy = useRef(false);
+  const { soundLabel, toggleSound } = useFeudSounds(serverGame, route.code);
 
   const game =
     revealing && revealing.questionIndex === serverGame?.questionIndex
@@ -286,6 +288,13 @@ export default function Feud() {
           DESI <span>✦</span> FEUD
         </a>
         <div className="feud-header-actions">
+          <button
+            className="feud-button subtle"
+            data-feud-sound-toggle
+            onClick={toggleSound}
+          >
+            {soundLabel}
+          </button>
           {game ? (
             <span
               role="status"
