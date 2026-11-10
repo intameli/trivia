@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { boardPoints, currentBoard } from "./game.js";
+import {
+  applyAction,
+  boardPoints,
+  currentBoard,
+  revealedAnswers,
+} from "./game.js";
 import {
   createRoom,
   friendlyError,
@@ -37,7 +42,8 @@ function gameUrl(code, view, key = "") {
 
 export default function Feud() {
   const [route, setRoute] = useState(initialRoute);
-  const [game, setGame] = useState(null);
+  const [serverGame, setGame] = useState(null);
+  const [revealing, setRevealing] = useState(null);
   const [synced, setSynced] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const [error, setError] = useState("");
@@ -46,6 +52,18 @@ export default function Feud() {
   const [pairing, setPairing] = useState(false);
   const [copied, setCopied] = useState("");
   const [confirmNext, setConfirmNext] = useState(null);
+  const actionPending = useRef(false);
+  const syncTimer = useRef(null);
+  const latestSnapshot = useRef("");
+  const expectedSnapshot = useRef("");
+
+  const game =
+    revealing && revealing.questionIndex === serverGame?.questionIndex
+      ? revealing.indices.reduce(
+          (next, index) => applyAction(next, { type: "reveal", index }),
+          serverGame,
+        )
+      : serverGame;
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
@@ -58,10 +76,27 @@ export default function Feud() {
   }, []);
 
   useEffect(() => {
+    const reconnect = () => {
+      if (navigator.onLine && document.visibilityState === "visible")
+        setRetry((value) => value + 1);
+    };
+    window.addEventListener("online", reconnect);
+    window.addEventListener("focus", reconnect);
+    window.addEventListener("pageshow", reconnect);
+    document.addEventListener("visibilitychange", reconnect);
+    return () => {
+      window.removeEventListener("online", reconnect);
+      window.removeEventListener("focus", reconnect);
+      window.removeEventListener("pageshow", reconnect);
+      document.removeEventListener("visibilitychange", reconnect);
+      clearTimeout(syncTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!route.code) return undefined;
     let cancelled = false;
     let unsubscribe;
-    setGame(null);
     setSynced(false);
     setError("");
     (async () => {
@@ -74,8 +109,30 @@ export default function Feud() {
         route.code,
         (nextGame, connected) => {
           if (!cancelled) {
+            // Cached snapshots can trail a committed action after reconnecting.
+            // Keep the last board until the server catches up.
+            if (!connected) {
+              setSynced(false);
+              return;
+            }
+            latestSnapshot.current = JSON.stringify(nextGame);
+            if (latestSnapshot.current === expectedSnapshot.current)
+              clearTimeout(syncTimer.current);
             setGame(nextGame);
             setSynced(connected);
+            setError("");
+            setRevealing((previous) => {
+              if (
+                previous?.questionIndex !== nextGame.questionIndex ||
+                nextGame.finished ||
+                currentBoard(nextGame).awardedTo !== null
+              )
+                return null;
+              const indices = previous.indices.filter(
+                (index) => !currentBoard(nextGame).revealed.includes(index),
+              );
+              return indices.length ? { ...previous, indices } : null;
+            });
             setConfirmNext((confirmation) =>
               confirmation?.questionIndex === nextGame.questionIndex &&
               !nextGame.finished &&
@@ -125,21 +182,57 @@ export default function Feud() {
   function connect(code) {
     const normalized = normalizeCode(code);
     window.history.replaceState(null, "", gameUrl(normalized, "board"));
+    setGame(null);
+    setRevealing(null);
+    setConfirmNext(null);
     setRoute({ code: normalized, view: "board", key: readKey(normalized) });
   }
 
   async function act(action) {
-    if (pending || !synced || !online) return;
+    if (actionPending.current || pending || !synced || !online) return;
+    actionPending.current = true;
     setPending(true);
     setError("");
+    const questionIndex = game.questionIndex;
+    if (action.type === "reveal") {
+      setRevealing((previous) => ({
+        questionIndex,
+        indices: [
+          ...(previous?.questionIndex === questionIndex
+            ? previous.indices
+            : []),
+          action.index,
+        ],
+      }));
+    }
     try {
-      await sendAction(route.code, {
-        questionIndex: game.questionIndex,
+      const committedGame = await sendAction(route.code, {
+        questionIndex,
         ...action,
       });
+      // A completed transaction must also reach the live listener. Restart a
+      // stalled listener instead of requiring a manual page refresh.
+      expectedSnapshot.current = JSON.stringify(committedGame);
+      clearTimeout(syncTimer.current);
+      if (latestSnapshot.current !== expectedSnapshot.current) {
+        syncTimer.current = setTimeout(
+          () => setRetry((value) => value + 1),
+          1500,
+        );
+      }
     } catch (failure) {
+      if (action.type === "reveal") {
+        setRevealing((previous) => {
+          if (previous?.questionIndex !== questionIndex) return previous;
+          const indices = previous.indices.filter(
+            (index) => index !== action.index,
+          );
+          return indices.length ? { ...previous, indices } : null;
+        });
+      }
       setError(friendlyError(failure));
     } finally {
+      actionPending.current = false;
       setPending(false);
     }
   }
@@ -149,7 +242,7 @@ export default function Feud() {
       await navigator.clipboard.writeText(url);
       setCopied(`${label} copied`);
     } catch {
-      setCopied("Select and copy the link below.");
+      setCopied("Copy the link below.");
     }
   }
 
@@ -171,11 +264,7 @@ export default function Feud() {
               role="status"
               className={`feud-connection${connected ? " is-live" : ""}`}
             >
-              {connected
-                ? "Live"
-                : online
-                  ? "Connecting…"
-                  : "Offline · controls paused"}
+              {connected ? "Live" : online ? "Connecting…" : "Offline"}
             </span>
           ) : null}
           {game ? (
@@ -197,16 +286,14 @@ export default function Feud() {
                   ? document.exitFullscreen?.()
                   : document.documentElement
                       .requestFullscreen?.()
-                      .catch(() =>
-                        setError("Fullscreen is unavailable in this browser."),
-                      )
+                      .catch(() => setError("Fullscreen unavailable."))
               }
             >
               Fullscreen
             </button>
           ) : null}
           <a className="feud-button subtle" href={window.location.pathname}>
-            Game modes
+            Games
           </a>
         </div>
       </header>
@@ -221,20 +308,18 @@ export default function Feud() {
       ) : !game ? (
         <main className="feud-waiting">
           <p className="feud-eyebrow">ROOM {route.code}</p>
-          <h1>{error ? "Let’s reconnect." : "Setting the stage…"}</h1>
-          <p role={error ? "alert" : "status"}>
-            {error || "Connecting your screen to the game."}
-          </p>
+          <h1>{error ? "Can’t connect" : "Connecting…"}</h1>
+          {error ? <p role="alert">{error}</p> : null}
           {error ? (
             <div className="feud-button-row">
               <button
                 className="feud-button primary"
                 onClick={() => setRetry(retry + 1)}
               >
-                Try again
+                Retry
               </button>
               <a className="feud-button" href="?mode=feud">
-                Back to Feud
+                Back
               </a>
             </div>
           ) : null}
@@ -251,15 +336,18 @@ export default function Feud() {
           ) : null}
           {!connected ? (
             <p className="feud-offline" role="status">
-              {online
-                ? "Reconnecting to the game. Controls will resume when synced."
-                : "You’re offline. The last synced board is shown; controls are paused."}
+              {online ? "Reconnecting…" : "Offline · controls paused"}
+              {online ? (
+                <button
+                  className="feud-button subtle"
+                  onClick={() => setRetry((value) => value + 1)}
+                >
+                  Retry
+                </button>
+              ) : null}
             </p>
           ) : null}
           <div className="feud-game-meta">
-            <p className="feud-eyebrow">
-              {isController ? "HOST CONTROLLER" : "FRIENDS & FAMILY EDITION"}
-            </p>
             <span>
               ROOM <strong>{route.code}</strong>
             </span>
@@ -279,15 +367,14 @@ export default function Feud() {
                 aria-labelledby="feud-question"
               >
                 <p className="feud-eyebrow">
-                  ROUND {questions[game.questionIndex].round} <span>/</span>{" "}
+                  R{questions[game.questionIndex].round} <span>·</span>{" "}
                   {questions[game.questionIndex].category}
                 </p>
                 <h1 id="feud-question">
                   {questions[game.questionIndex].question}
                 </h1>
                 <p className="feud-question-count">
-                  QUESTION {game.questionIndex + 1} OF 30 <span>·</span> 5
-                  ANSWERS ON THE BOARD
+                  {game.questionIndex + 1} / {questions.length}
                 </p>
               </section>
               <div className="feud-board-layout">
@@ -302,12 +389,13 @@ export default function Feud() {
                 >
                   {questions[game.questionIndex].answers.map(
                     (answer, index) => {
-                      const revealed =
-                        currentBoard(game).revealed.includes(index);
+                      const revealed = revealedAnswers(game).includes(index);
                       return isController ? (
                         <button
                           className={`feud-answer controller-answer${revealed ? " is-revealed" : ""}`}
                           key={index}
+                          aria-pressed={revealed}
+                          aria-label={`${answer.text}, ${answer.points} points${revealed ? ", revealed" : ", reveal"}`}
                           disabled={
                             locked ||
                             revealed ||
@@ -323,7 +411,7 @@ export default function Feud() {
                             {answer.points}
                           </span>
                           <span className="feud-answer-state">
-                            {revealed ? "✓ REVEALED" : "TAP TO REVEAL"}
+                            {revealed ? "✓" : "+"}
                           </span>
                         </button>
                       ) : (
@@ -339,9 +427,7 @@ export default function Feud() {
                               <span
                                 className="feud-hidden-answer"
                                 aria-label={`Answer ${index + 1} hidden`}
-                              >
-                                DESI FEUD
-                              </span>
+                              />
                             )}
                           </span>
                           <span className="feud-answer-points">
@@ -353,7 +439,9 @@ export default function Feud() {
                   )}
                 </section>
                 <aside className="feud-bank">
-                  <p className="feud-eyebrow">POINTS BANK</p>
+                  <p className="feud-eyebrow">
+                    {currentBoard(game).awardedTo !== null ? "AWARDED" : "BANK"}
+                  </p>
                   <strong aria-label={`${boardPoints(game)} points in bank`}>
                     {boardPoints(game)}
                   </strong>
@@ -372,15 +460,14 @@ export default function Feud() {
                       </span>
                     ))}
                   </div>
-                  <p>
-                    {currentBoard(game).awardedTo !== null
-                      ? `Banked by ${game.teams[currentBoard(game).awardedTo].name}`
-                      : currentBoard(game).strikes === 3
-                        ? "Three strikes. Time for a steal!"
-                        : isController
-                          ? "Reveal answers, then award the bank."
-                          : "Think you know your family?"}
-                  </p>
+                  {currentBoard(game).awardedTo !== null ||
+                  currentBoard(game).strikes === 3 ? (
+                    <p>
+                      {currentBoard(game).awardedTo !== null
+                        ? game.teams[currentBoard(game).awardedTo].name
+                        : "Steal!"}
+                    </p>
+                  ) : null}
                 </aside>
               </div>
               {isController ? (
@@ -400,36 +487,20 @@ export default function Feud() {
                     else act({ type: "question", index });
                   }}
                 />
-              ) : (
-                <p className="feud-tv-hint">
-                  Your host has the answers. You bring the guesses.{" "}
-                  <span>✦</span>
-                </p>
-              )}
+              ) : null}
             </>
           )}
-          <p className="feud-ranking-note">
-            Points are suggested rankings for gameplay, not actual survey
-            results.
-          </p>
         </main>
       )}
 
       {pairing && game ? (
         <Dialog
-          title={
-            isController
-              ? "Bring it to the big screen."
-              : "Your phone. The host’s seat."
-          }
+          title={isController ? "Connect TV" : "Connect phone"}
           close={() => setPairing(false)}
         >
           {isController ? (
             <>
-              <p>
-                Open this site on your TV or laptop, choose Desi Feud, and enter
-                this room code.
-              </p>
+              <p>Enter this code on your TV.</p>
               <div className="feud-room-code">{route.code}</div>
               <a
                 className="feud-button primary"
@@ -437,7 +508,7 @@ export default function Feud() {
                 target="_blank"
                 rel="noreferrer"
               >
-                Open TV board ↗
+                Open TV ↗
               </a>
               <button
                 className="feud-button"
@@ -455,10 +526,7 @@ export default function Feud() {
             </>
           ) : route.key ? (
             <>
-              <p>
-                Scan with your phone’s camera. Tap answers on your phone to
-                reveal them here.
-              </p>
+              <p>Scan to host from your phone.</p>
               <div className="feud-qr">
                 <QRCodeSVG
                   value={controllerUrl}
@@ -468,13 +536,13 @@ export default function Feud() {
                 />
               </div>
               <a className="feud-button primary" href={controllerUrl}>
-                Use this screen as controller
+                Host here
               </a>
               <button
                 className="feud-button"
-                onClick={() => copyLink(controllerUrl, "Controller link")}
+                onClick={() => copyLink(controllerUrl, "Host link")}
               >
-                Copy private controller link
+                Copy host link
               </button>
               <input
                 className="feud-link"
@@ -483,17 +551,11 @@ export default function Feud() {
                 value={controllerUrl}
                 onFocus={(event) => event.target.select()}
               />
-              <p className="feud-small">
-                Keep this link with your host. Anyone with it can control the
-                game.
-              </p>
+              <p className="feud-small">Host only · grants control.</p>
             </>
           ) : (
             <>
-              <p>
-                This screen is a viewer. Open “Connect TV” on the host’s phone
-                to find your room code and share the board.
-              </p>
+              <p>Use the host’s phone to control this board.</p>
               <div className="feud-room-code">{route.code}</div>
             </>
           )}
@@ -505,14 +567,8 @@ export default function Feud() {
         </Dialog>
       ) : null}
       {confirmNext !== null && game ? (
-        <Dialog
-          title="Leave this bank unawarded?"
-          close={() => setConfirmNext(null)}
-        >
-          <p>
-            The {boardPoints(game)} points will stay with this question. You can
-            come back and award them later.
-          </p>
+        <Dialog title="Skip awarding?" close={() => setConfirmNext(null)}>
+          <p>{boardPoints(game)} points saved for later.</p>
           <button
             className="feud-button primary"
             disabled={locked}
@@ -521,10 +577,10 @@ export default function Feud() {
               setConfirmNext(null);
             }}
           >
-            Move to question {confirmNext.index + 1}
+            Go to {confirmNext.index + 1}
           </button>
           <button className="feud-button" onClick={() => setConfirmNext(null)}>
-            Stay and award points
+            Stay
           </button>
         </Dialog>
       ) : null}
@@ -539,16 +595,12 @@ function Lobby({ start, connect, pending, error }) {
   return (
     <main className="feud-lobby">
       <div className="feud-lobby-intro">
-        <p className="feud-eyebrow">FAMILY FEUD, WITH A DESI TWIST.</p>
         <h1>
-          Our families.
+          Guess the
           <br />
-          <em>The top answers.</em>
+          <em>top answers.</em>
         </h1>
-        <p>
-          From family WhatsApp to the Bollywood dance floor. Split into two
-          teams and see who knows us best.
-        </p>
+        <p>Guess aloud. Reveal from your phone.</p>
         <div className="feud-facts">
           <span>
             <strong>30</strong> questions
@@ -560,17 +612,6 @@ function Lobby({ start, connect, pending, error }) {
             <strong>2</strong> teams
           </span>
         </div>
-        <div className="feud-how">
-          <p>
-            <span>01</span> Start a game on your TV or phone.
-          </p>
-          <p>
-            <span>02</span> Connect your other screen.
-          </p>
-          <p>
-            <span>03</span> Guess out loud. Reveal from your phone.
-          </p>
-        </div>
       </div>
       <div className="feud-setup">
         <form
@@ -580,8 +621,7 @@ function Lobby({ start, connect, pending, error }) {
             start(names, view);
           }}
         >
-          <p className="feud-eyebrow">LET THE RIVALRY BEGIN</p>
-          <h2>Start a new game</h2>
+          <h2>New game</h2>
           <div className="feud-team-fields">
             {names.map((name, index) => (
               <label key={index}>
@@ -602,7 +642,7 @@ function Lobby({ start, connect, pending, error }) {
             ))}
           </div>
           <fieldset>
-            <legend>This screen is my…</legend>
+            <legend>This screen</legend>
             <div className="feud-view-choice">
               <label>
                 <input
@@ -612,7 +652,7 @@ function Lobby({ start, connect, pending, error }) {
                   checked={view === "board"}
                   onChange={() => setView("board")}
                 />
-                <span>▣ TV / laptop</span>
+                <span>▣ TV</span>
               </label>
               <label>
                 <input
@@ -622,16 +662,14 @@ function Lobby({ start, connect, pending, error }) {
                   checked={view === "controller"}
                   onChange={() => setView("controller")}
                 />
-                <span>▯ Phone controller</span>
+                <span>▯ Phone</span>
               </label>
             </div>
           </fieldset>
           <button className="feud-button primary" disabled={pending}>
-            {pending ? "Creating your room…" : "Start the feud →"}
+            {pending ? "Starting…" : "Start →"}
           </button>
-          <p className="feud-small">
-            No account needed. Your game saves automatically for 7 days.
-          </p>
+          <p className="feud-small">Saved for 7 days · suggested points.</p>
         </form>
         <form
           className="feud-panel join-panel"
@@ -641,8 +679,7 @@ function Lobby({ start, connect, pending, error }) {
           }}
         >
           <div>
-            <h2>Already have a host?</h2>
-            <p>Connect this screen to their TV board.</p>
+            <h2>Join on TV</h2>
           </div>
           <label className="feud-code-field">
             Room code
@@ -660,7 +697,7 @@ function Lobby({ start, connect, pending, error }) {
             />
           </label>
           <button className="feud-button" disabled={pending}>
-            Join TV board ↗
+            Join ↗
           </button>
         </form>
         {error ? (
@@ -679,7 +716,6 @@ function Scoreboard({ game }) {
       {game.teams.map((team, index) => (
         <div className={`feud-team team-${index}`} key={index}>
           <div>
-            <span className="feud-eyebrow">TEAM {index + 1}</span>
             <h2>{team.name}</h2>
           </div>
           <strong aria-label={`${team.name}: ${team.score} points`}>
@@ -701,7 +737,7 @@ function HostControls({ game, act, locked, requestQuestion }) {
           disabled={locked || board.strikes === 3 || board.awardedTo !== null}
           onClick={() => act({ type: "strike" })}
         >
-          × Add strike
+          × Strike
         </button>
         <button
           className="feud-button"
@@ -723,9 +759,12 @@ function HostControls({ game, act, locked, requestQuestion }) {
       <div className="feud-award-controls">
         <p className="feud-eyebrow">
           {board.awardedTo !== null
-            ? `${board.awardedPoints} POINTS AWARDED`
-            : `AWARD ${boardPoints(game)} POINTS TO…`}
+            ? `${board.awardedPoints} PTS AWARDED`
+            : `AWARD ${boardPoints(game)} PTS`}
         </p>
+        {board.awardedTo === null ? (
+          <p className="feud-small feud-award-hint">Awarding reveals all.</p>
+        ) : null}
         <div className="feud-button-row">
           {game.teams.map((team, index) => (
             <button
@@ -756,10 +795,10 @@ function HostControls({ game, act, locked, requestQuestion }) {
           disabled={locked || game.questionIndex === 0}
           onClick={() => requestQuestion(game.questionIndex - 1)}
         >
-          ← Previous
+          ← Prev
         </button>
         <label>
-          Go to question
+          Question
           <select
             value={game.questionIndex}
             disabled={locked}
@@ -794,7 +833,7 @@ function HostControls({ game, act, locked, requestQuestion }) {
             }
             onClick={() => act({ type: "finish" })}
           >
-            Finish game ✦
+            Finish ✦
           </button>
         )}
       </div>
@@ -809,24 +848,18 @@ function Finale({ game, isController, locked, act }) {
   return (
     <section className="feud-finale">
       <span>✦</span>
-      <p className="feud-eyebrow">THE FAMILY HAS SPOKEN</p>
       <h1>{tied ? "It’s a tie!" : `${winner.name} wins!`}</h1>
-      <p>
-        {tied
-          ? "Shared bragging rights. Until next time."
-          : `${winner.score} points. Unlimited bragging rights.`}
-      </p>
       {isController ? (
         <button
           className="feud-button"
           disabled={locked}
           onClick={() => act({ type: "resume" })}
         >
-          Return to game
+          Back to game
         </button>
       ) : null}
       <a className="feud-button primary" href="?mode=feud">
-        Start another feud ↗
+        New game ↗
       </a>
     </section>
   );
@@ -857,7 +890,6 @@ function Dialog({ title, close, children }) {
       >
         ×
       </button>
-      <p className="feud-eyebrow">A FAMILY AFFAIR</p>
       <h2 id="feud-dialog-title">{title}</h2>
       {children}
     </dialog>

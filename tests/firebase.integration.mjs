@@ -26,7 +26,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { firebaseConfig } from "../src/feud/config.js";
-import { applyAction, createGame } from "../src/feud/game.js";
+import { applyAction, createGame, revealedAnswers } from "../src/feud/game.js";
 
 const live = process.argv.includes("--live");
 const config = live
@@ -123,24 +123,34 @@ await test(
         },
       );
       await t.test(
-        "TV receives a phone reveal through a real snapshot listener",
+        "TV and phone both receive a confirmed phone reveal through real listeners",
         async () => {
-          let stop;
-          const received = new Promise((resolve, reject) => {
-            stop = onSnapshot(
-              viewer.room,
-              (snapshot) => {
-                if (snapshot.data()?.game.boards["1"].revealed.includes(1))
-                  resolve();
-              },
-              reject,
-            );
-          });
+          const stops = [];
+          const received = [viewer, phone].map(
+            (client) =>
+              new Promise((resolve, reject) => {
+                stops.push(
+                  onSnapshot(
+                    client.room,
+                    { includeMetadataChanges: true },
+                    (snapshot) => {
+                      if (
+                        !snapshot.metadata.hasPendingWrites &&
+                        !snapshot.metadata.fromCache &&
+                        snapshot.data()?.game.boards["1"].revealed.includes(1)
+                      )
+                        resolve();
+                    },
+                    reject,
+                  ),
+                );
+              }),
+          );
           try {
             await act(phone, { type: "reveal", index: 1 });
-            await received;
+            await Promise.all(received);
           } finally {
-            stop?.();
+            stops.forEach((stop) => stop());
           }
         },
       );
@@ -162,6 +172,18 @@ await test(
           ]);
           assert.equal(
             (await getDocFromServer(owner.room)).data().game.teams[0].score,
+            90,
+          );
+          const awarded = (await getDocFromServer(viewer.room)).data().game;
+          assert.deepEqual(revealedAnswers(awarded), [0, 1, 2, 3, 4]);
+          assert.equal(awarded.boards["1"].awardedPoints, 90);
+          await act(phone, { type: "undoAward" });
+          const undone = (await getDocFromServer(viewer.room)).data().game;
+          assert.deepEqual(revealedAnswers(undone), [0, 1, 2, 3]);
+          assert.equal(undone.teams[0].score, 0);
+          await act(phone, { type: "award", team: 0 });
+          assert.equal(
+            (await getDocFromServer(viewer.room)).data().game.teams[0].score,
             90,
           );
         },

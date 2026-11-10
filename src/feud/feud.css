@@ -288,20 +288,6 @@
     serif;
   color: var(--feud-cream);
 }
-.feud-how {
-  margin-top: 2.2rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--feud-line);
-  font-size: 0.8rem;
-}
-.feud-how p {
-  margin: 0.9rem 0;
-}
-.feud-how span {
-  margin-right: 0.8rem;
-  color: var(--feud-gold);
-  font-size: 0.65rem;
-}
 .feud-setup {
   display: flex;
   flex-direction: column;
@@ -419,7 +405,7 @@
 }
 .feud-game-meta {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 1rem;
   align-items: center;
   margin: 1.3rem 0;
@@ -584,6 +570,7 @@
   max-width: 10rem;
   font-size: 0.75rem;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 .feud-strikes {
   display: flex;
@@ -608,22 +595,6 @@
   background: #8b3a292b;
   animation: feud-reveal 0.2s;
 }
-.feud-tv-hint {
-  margin: 1.4rem 0 0;
-  color: var(--feud-muted);
-  text-align: center;
-  font-size: 0.7rem;
-}
-.feud-tv-hint span {
-  color: var(--feud-gold);
-  margin-left: 0.7rem;
-}
-.feud-ranking-note {
-  margin: 1rem 0 0;
-  text-align: center;
-  color: #84927e;
-  font-size: 0.6rem;
-}
 .feud-host-controls {
   display: grid;
   gap: 1.3rem;
@@ -633,6 +604,9 @@
   padding: 1rem;
   border: 1px solid var(--feud-line);
   border-radius: 0.7rem;
+}
+.feud-award-hint {
+  margin: 0.25rem 0 0;
 }
 .feud-award-controls .feud-button-row {
   margin-top: 0.6rem;
@@ -796,7 +770,7 @@
   align-content: start;
   padding: 1rem;
   text-align: left;
-  min-height: 9rem;
+  min-height: 7.5rem;
 }
 .controller-answer .feud-answer-rank {
   width: 1.5rem;
@@ -813,13 +787,14 @@
   font-size: 1.4rem;
 }
 .controller-answer .feud-answer-state {
-  grid-column: 1 / -1;
-  font-size: 0.55rem;
-  letter-spacing: 0.1em;
-  align-self: end;
+  position: absolute;
+  top: 1rem;
+  left: 3rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
 }
-.controller-answer:disabled.is-revealed {
-  opacity: 0.85;
+.feud-shell .controller-answer:disabled.is-revealed {
+  opacity: 1;
 }
 .controller-play .feud-bank {
   display: grid;
@@ -956,9 +931,6 @@
     margin-top: 1.4rem;
     gap: 2rem;
   }
-  .feud-how {
-    margin-top: 1.4rem;
-  }
   .feud-panel {
     padding: 1.2rem;
   }
@@ -1045,8 +1017,12 @@
     margin: 0.4rem 0 0;
   }
   .controller-answer {
-    min-height: 10rem;
+    min-height: 7rem;
     padding: 0.8rem;
+  }
+  .controller-answer .feud-answer-state {
+    top: 0.8rem;
+    left: 2.8rem;
   }
   .controller-answer .feud-answer-text {
     font-size: 0.9rem;
@@ -1111,11 +1087,5 @@
   }
   .tv-answer .feud-answer-text {
     font-size: clamp(0.95rem, 1.6vw, 1.4rem);
-  }
-  .feud-tv-hint {
-    margin-top: 0.8rem;
-  }
-  .feud-play:not(.controller-play) .feud-ranking-note {
-    margin-top: 0.65rem;
   }
 }

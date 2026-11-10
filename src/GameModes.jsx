@@ -14,9 +14,7 @@ export default function GameModes() {
     );
   if (mode === "feud")
     return (
-      <Suspense
-        fallback={<div className="feud-loading">Getting the board ready…</div>}
-      >
+      <Suspense fallback={<div className="feud-loading">Loading…</div>}>
         <Feud />
       </Suspense>
     );
@@ -50,16 +48,12 @@ export default function GameModes() {
           </span>
         </a>
         <a className="mode-card feud-mode" href="?mode=feud">
-          <span className="mode-number">02 / FRIENDS & FAMILY EDITION</span>
+          <span className="mode-number">02 / DESI EDITION</span>
           <span className="mode-symbol">✦</span>
           <h2>Desi Feud</h2>
-          <p>
-            30 questions. Two teams.
-            <br />
-            One very opinionated family.
-          </p>
+          <p>30 questions. Two teams.</p>
           <span className="mode-cta">
-            Survey says… <span>↗</span>
+            Play <span>↗</span>
           </span>
         </a>
       </div>

@@ -52,17 +52,14 @@ export function normalizeCode(code) {
 function roomRef(code) {
   const normalized = normalizeCode(code);
   if (!/^[A-HJ-NP-Z2-9]{6}$/.test(normalized))
-    throw new Error(
-      "Enter the six-character room code shown on the other screen.",
-    );
+    throw new Error("Enter a 6-character room code.");
   return doc(db, "feudRooms", normalized);
 }
 
 function assertRoom(snapshot) {
-  if (!snapshot.exists())
-    throw new Error("That room does not exist. Check the code and try again.");
+  if (!snapshot.exists()) throw new Error("Room not found. Check the code.");
   if (snapshot.data().expiresAt.toMillis() < Date.now())
-    throw new Error("This room has expired. Start a new game.");
+    throw new Error("Room expired. Start a new game.");
   return snapshot.data();
 }
 
@@ -85,7 +82,7 @@ export async function createRoom(teamNames) {
     });
     if (created) return { code, key };
   }
-  throw new Error("Could not create a unique room. Please try again.");
+  throw new Error("Couldn’t create a room. Try again.");
 }
 
 export async function joinRoom(code, { controller = false, key = "" } = {}) {
@@ -98,10 +95,7 @@ export async function joinRoom(code, { controller = false, key = "" } = {}) {
     // after the first claim rather than attempting a forbidden member update.
     await runTransaction(db, async (transaction) => {
       if ((await transaction.get(memberRef)).exists()) return;
-      if (!key)
-        throw new Error(
-          "Scan the host’s QR code or use their private controller link to control this game.",
-        );
+      if (!key) throw new Error("Scan the host’s QR or use their host link.");
       transaction.set(memberRef, { key });
     });
   }
@@ -131,34 +125,28 @@ export async function subscribeRoom(code, onChange, onError) {
 
 export async function sendAction(code, action) {
   await authenticate();
-  await runTransaction(db, async (transaction) => {
+  return runTransaction(db, async (transaction) => {
     const reference = roomRef(code);
     const room = assertRoom(await transaction.get(reference));
     const nextGame = applyAction(room.game, action);
     if (nextGame !== room.game)
       transaction.update(reference, { game: nextGame });
+    return nextGame;
   });
 }
 
 export function friendlyError(error) {
   const messages = {
-    "auth/operation-not-allowed":
-      "Anonymous sign-in needs to be enabled in Firebase Authentication.",
-    "auth/configuration-not-found":
-      "Firebase Authentication needs to be set up with Anonymous sign-in enabled.",
-    "auth/network-request-failed":
-      "Could not reach Firebase. Check your internet connection and try again.",
+    "auth/operation-not-allowed": "Enable anonymous sign-in in Firebase.",
+    "auth/configuration-not-found": "Enable anonymous sign-in in Firebase.",
+    "auth/network-request-failed": "Can’t connect. Check your internet.",
     "auth/unauthorized-domain":
-      "This site’s domain needs to be added to Firebase Authentication’s authorised domains.",
-    "permission-denied":
-      "This room is unavailable or access was denied. Check the room code, controller link, and Firebase rules.",
-    unavailable: "Connection lost. Reconnect to the internet, then try again.",
-    "failed-precondition":
-      "The Firebase database is not ready. Check the Firestore setup.",
+      "Authorise this domain in Firebase Authentication.",
+    "permission-denied": "Can’t access this room. Check the code or host link.",
+    unavailable: "Connection lost. Retry when online.",
+    "failed-precondition": "Database unavailable. Check Firestore setup.",
   };
   return (
-    messages[error.code] ??
-    error.message ??
-    "Something went wrong. Please try again."
+    messages[error.code] ?? error.message ?? "Something went wrong. Try again."
   );
 }

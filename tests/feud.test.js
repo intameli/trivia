@@ -5,6 +5,7 @@ import {
   boardPoints,
   createGame,
   currentBoard,
+  revealedAnswers,
 } from "../src/feud/game.js";
 import { questions, rounds } from "../src/feud/questions.js";
 
@@ -49,12 +50,36 @@ test("bank is awarded once, locked, and can be corrected", () => {
   assert.equal(applyAction(game, { type: "award", team: 1 }), game);
   assert.equal(applyAction(game, { type: "award", team: 0 }), game);
   assert.equal(applyAction(game, { type: "reveal", index: 4 }), game);
+  assert.deepEqual(revealedAnswers(game), [0, 1, 2, 3, 4]);
+  assert.equal(boardPoints(game), 50);
+  assert.equal(currentBoard(game).awardedPoints, 50);
   game = applyAction(game, { type: "undoAward" });
   assert.equal(game.teams[1].score, 0);
+  assert.deepEqual(revealedAnswers(game), [0, 2]);
   game = applyAction(game, { type: "award", team: 0 });
   assert.deepEqual(
     game.teams.map((t) => t.score),
     [50, 0],
+  );
+});
+
+test("awarded boards from saved rooms reveal all answers without inflating scores", () => {
+  let game = applyAction(createGame(), { type: "reveal", index: 4 });
+  game = applyAction(game, { type: "award", team: 0 });
+  game = JSON.parse(JSON.stringify(game));
+  game = applyAction(game, { type: "question", index: 1 });
+  assert.deepEqual(revealedAnswers(game), []);
+  game = applyAction(game, { type: "question", index: 0 });
+  assert.deepEqual(revealedAnswers(game), [0, 1, 2, 3, 4]);
+  assert.equal(boardPoints(game), 10);
+  assert.equal(game.teams[0].score, 10);
+  game = applyAction(game, { type: "undoAward" });
+  assert.deepEqual(revealedAnswers(game), [4]);
+  game = applyAction(game, { type: "reveal", index: 0 });
+  game = applyAction(game, { type: "award", team: 1 });
+  assert.deepEqual(
+    game.teams.map((team) => team.score),
+    [0, 40],
   );
 });
 

@@ -30,6 +30,14 @@ export function boardPoints(game) {
   );
 }
 
+// An award closes the board. Show the remaining answers without adding their
+// points to the earned bank; undoing an award restores the original reveals.
+export function revealedAnswers(game) {
+  return currentBoard(game).awardedTo !== null
+    ? questions[game.questionIndex].answers.map((_, index) => index)
+    : currentBoard(game).revealed;
+}
+
 // Run against the latest server state in a transaction, so retries and double
 // taps cannot award the same bank twice or lose another controller's reveal.
 export function applyAction(game, action) {

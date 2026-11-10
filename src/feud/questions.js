@@ -1,51 +1,51 @@
 // Suggested game rankings supplied for Desi Feud, not survey results.
 export const rounds = [
-  "Desi Family Classics",
-  "Mums, Dads & Household Chaos",
+  "Family Classics",
+  "Household Chaos",
   "Weddings & Bollywood",
-  "Desi Life in Australia",
-  "Diwali & Party Time",
+  "Life in Australia",
+  "Diwali & Parties",
 ];
 
 const entries = [
   [
     1,
-    "Name something every Desi parent says.",
+    "What does every Desi parent say?",
     [
-      "“Log kya kahenge?” (What will people say?)",
-      "“When are you getting married?”",
+      "“Log kya kahenge?”",
+      "“When’s the wedding?”",
       "“Eat more / eat less!”",
       "“When are you having kids?”",
-      "“Go turn off the fan/light.”",
+      "“Turn off the fan/light!”",
     ],
   ],
   [
     1,
-    "Name something Desi kids try to hide from their parents.",
+    "What do Desi kids hide from their parents?",
     [
-      "Their report card / bad grades",
-      "Their dating life / boyfriend or girlfriend",
-      "Going out late / partying",
-      "Spending too much money",
-      "Eating junk food",
+      "Bad grades",
+      "Dating",
+      "Late nights / parties",
+      "Overspending",
+      "Junk food",
     ],
   ],
   [
     1,
-    "Name a standard “Desi fix” for a minor household or health problem.",
+    "Name a classic “Desi fix”.",
     [
       "Vicks VapoRub",
-      "Drink haldi doodh (turmeric milk)",
+      "Haldi doodh (turmeric milk)",
       "Coconut oil for squeaky hinges",
-      "Smack the TV remote to make it work",
-      "Turn it off and turn it back on",
+      "Smack the remote",
+      "Turn it off and on",
     ],
   ],
   [
     1,
-    "Name something you will always find packed inside a Desi person’s suitcase when they travel.",
+    "What’s always in a Desi traveller’s suitcase?",
     [
-      "A jar of achaar wrapped in multiple plastic bags",
+      "Achaar in layers of plastic",
       "Medicines",
       "Homemade snacks",
       "Nuts",
@@ -54,18 +54,18 @@ const entries = [
   ],
   [
     1,
-    "Name something you will always find in a “Family WhatsApp Group”.",
+    "What’s in every family WhatsApp group?",
     [
       "Good Morning images",
       "Fake news",
       "Forwarded medical advice",
-      "Birthday and anniversary messages",
+      "Birthday / anniversary wishes",
       "Death notices",
     ],
   ],
   [
     1,
-    "Name something a Brown parent says when you leave the house.",
+    "What do Brown parents say as you leave?",
     [
       "“Where are you going?”",
       "“When will you be back?”",
@@ -76,12 +76,12 @@ const entries = [
   ],
   [
     2,
-    "Name something a Brown dad tries to fix instead of replacing.",
+    "What will a Brown dad fix rather than replace?",
     ["TV or remote", "Fan", "Washing machine", "Car part", "Tap"],
   ],
   [
     2,
-    "Name something Brown dads do with their friends.",
+    "What do Brown dads do with friends?",
     [
       "Talk about work",
       "Discuss politics",
@@ -92,21 +92,15 @@ const entries = [
   ],
   [
     2,
-    "Name a profession every Desi parent secretly wishes their child would pursue.",
-    [
-      "Doctor",
-      "Engineer",
-      "Lawyer",
-      "Chartered Accountant (CA)",
-      "Business owner",
-    ],
+    "What career do Desi parents want for their kids?",
+    ["Doctor", "Engineer", "Lawyer", "Chartered accountant", "Business owner"],
   ],
   [
     2,
-    "Name a kitchen item that a Desi mum refuses to throw away.",
+    "What kitchen item won’t a Desi mum bin?",
     [
-      "Empty plastic ice cream tubs used for leftovers or frozen meat",
-      "Reusable plastic bags stuffed into one giant bag",
+      "Ice cream tubs for leftovers",
+      "A bag full of plastic bags",
       "Glass pickle jars",
       "Elastic bands",
       "Biscuit tins",
@@ -114,12 +108,12 @@ const entries = [
   ],
   [
     2,
-    "Name something every Brown household has in its fridge.",
+    "What’s in every Brown family’s fridge?",
     ["Leftover curry", "Yoghurt", "Chutney or achaar", "Coriander", "Fruit"],
   ],
   [
     2,
-    "Name something you find in an Indian household in Australia.",
+    "What’s in an Indian home in Australia?",
     [
       "Pressure cooker",
       "Rice cooker",
@@ -130,7 +124,7 @@ const entries = [
   ],
   [
     2,
-    "Name a snack that absolutely no Desi person can turn down.",
+    "What snack can no Desi turn down?",
     [
       "Samosas",
       "Pani puri / golgappe",
@@ -141,23 +135,23 @@ const entries = [
   ],
   [
     2,
-    "Name a household object that is never used for its original purpose.",
+    "What household item gets used for something else?",
     [
-      "Biscuit tins used to store sewing kits, needles and thread",
-      "Oven used to store extra pots and pans",
-      "Old T-shirts used as cleaning rags or mops",
-      "Dining table used as a dumping ground for mail, keys and bags",
-      "Treadmill used as a clothes rack",
+      "Biscuit tin → sewing kit",
+      "Oven → pots and pans",
+      "Old T-shirts → cleaning rags",
+      "Dining table → dumping ground",
+      "Treadmill → clothes rack",
     ],
   ],
   [
     3,
-    "What is the most common argument at a Desi wedding?",
+    "What causes arguments at a Desi wedding?",
     ["The food", "The DJ’s music", "Guest list", "Seating plan", "No shoutout"],
   ],
   [
     3,
-    "Name a Bollywood star everyone recognises.",
+    "Name a Bollywood star everyone knows.",
     [
       "Shah Rukh Khan",
       "Aishwarya Rai",
@@ -184,7 +178,7 @@ const entries = [
   ],
   [
     3,
-    "What do people do when a Bollywood dance song plays?",
+    "A Bollywood dance song plays. What happens?",
     [
       "Hit the dance floor",
       "Do the hook step",
@@ -195,18 +189,18 @@ const entries = [
   ],
   [
     3,
-    "Name a standard trope or cliché found in every classic Bollywood movie.",
+    "Name a classic Bollywood cliché.",
     [
-      "A dance sequence in the rain or snow",
-      "The strict, unapproachable father",
+      "Dancing in rain or snow",
+      "The strict father",
       "Long-lost twins",
       "Memory loss",
-      "A dramatic airport chase at the end",
+      "Airport chase",
     ],
   ],
   [
     3,
-    "What happens when Brown families take a group photo?",
+    "What happens in a Brown family group photo?",
     [
       "Someone blinks",
       "Someone’s missing",
@@ -234,12 +228,12 @@ const entries = [
   ],
   [
     4,
-    "Name something you see at an Indian supermarket.",
+    "What’s in an Indian supermarket?",
     ["Spices", "Snacks", "Lentils", "Sweets / mithai", "Utensils"],
   ],
   [
     4,
-    "What might an Indian family save for special occasions?",
+    "What do Indian families save for special occasions?",
     [
       "Gold jewellery",
       "Special outfits",
@@ -255,7 +249,7 @@ const entries = [
   ],
   [
     5,
-    "Name a game that everyone plays at family gatherings.",
+    "Name a game played at family gatherings.",
     ["Antakshari / karaoke", "Ludo", "Carrom", "Cards", "Bingo"],
   ],
   [
@@ -266,17 +260,17 @@ const entries = [
       "Aunties in the kitchen",
       "Taking photos",
       "Someone arrives late",
-      "Child sleeping in a room",
+      "A sleeping child",
     ],
   ],
   [
     5,
-    "Name a gift you might receive at Diwali.",
+    "Name a Diwali gift.",
     ["Mithai", "Cash", "Candles", "Dry fruit hamper", "Serving-ware"],
   ],
   [
     5,
-    "You have just annoyed your desi mum, what is her preferred choice of weapon?",
+    "You’ve annoyed your Desi mum. Her weapon of choice?",
     ["Slippers/chappal", "Wooden spoon", "Belt", "Slap/hands", "Her words"],
   ],
 ];
